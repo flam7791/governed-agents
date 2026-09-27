@@ -11,11 +11,12 @@
   "mcp_servers": [
     {
       "name": "evidence",
+      "url_env": "GOVAGENTS_EVIDENCE_MCP_URL",
       "command": "evidence-mcp",
       "args": ["serve"],
       "env": {"EVIDENCE_MCP_MAX_CLASSIFICATION": "public"},
       "optional": true,
-      "note": "The policy-evidence-mcp server (a separate repository). Its tools declare themselves read-only, so they are classified as read."
+      "note": "The policy-evidence-mcp server (a separate repository): reached by URL when GOVAGENTS_EVIDENCE_MCP_URL is set (as in a deployment), otherwise launched locally. Its tools declare themselves read-only, so they are classified as read."
     }
   ],
   "agents": [

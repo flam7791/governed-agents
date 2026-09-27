@@ -43,6 +43,23 @@ def llm_factory(settings: Settings):
     return for_tier
 
 
+def mcp_target(server: dict):
+    """Where to reach an MCP server: a URL (Streamable HTTP) or a local command (stdio).
+
+    "url_env" names an environment variable holding the URL, so the same scenario runs on a
+    laptop (the command) and in a deployment (the URL of the server's container).
+    """
+    url = os.environ.get(server["url_env"]) if server.get("url_env") else None
+    url = url or server.get("url")
+    if url:
+        return url
+    from mcp import StdioServerParameters
+
+    return StdioServerParameters(
+        command=server["command"], args=server.get("args", []), env=server.get("env")
+    )
+
+
 @asynccontextmanager
 async def open_runner(settings: Settings, scenario_name: str, llm_for_tier=None):
     scenario = Scenario.load(settings.scenarios_dir / scenario_name)
@@ -58,14 +75,9 @@ async def open_runner(settings: Settings, scenario_name: str, llm_for_tier=None)
         register_triage_tools(registry, workspace, settings)
 
     for server in scenario.mcp_servers if settings.enable_mcp else []:
-        from mcp import StdioServerParameters
-
-        params = StdioServerParameters(
-            command=server["command"], args=server.get("args", []), env=server.get("env")
-        )
         try:
             added = await registry.connect_mcp(
-                server["name"], params, server.get("action_overrides")
+                server["name"], mcp_target(server), server.get("action_overrides")
             )
             log.warning("connected MCP server %s: %s", server["name"], ", ".join(added))
         except Exception as exc:  # e.g. the server is not installed on this machine

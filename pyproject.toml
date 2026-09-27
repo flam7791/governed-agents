@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "governed-agents"
-version = "0.1.0"
-description = "A reference architecture for governed multi-agent systems: specialist agents, MCP tools, autonomy enforced in code, durable human approval, full audit trace and trajectory evaluation."
+version = "0.2.0"
+description = "A reference architecture for governed multi-agent systems: specialist agents, MCP tools, autonomy enforced in code, durable human approval (CLI or web), full audit trace, metrics and trajectory evaluation."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -19,7 +19,16 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-asyncio>=0.24", "ruff>=0.6"]
+# The HTTP service, approvals page and metrics (govagents serve)
+server = ["fastapi>=0.110", "uvicorn>=0.29", "prometheus-client>=0.20"]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.6",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "prometheus-client>=0.20",
+]
 
 [project.scripts]
 govagents = "govagents.cli:main"

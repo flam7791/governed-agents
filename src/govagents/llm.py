@@ -202,7 +202,12 @@ class JsonActionLLM:
                 "temperature": 0,
             },
         )
-        response.raise_for_status()
+        if response.status_code >= 400:  # e.g. the gateway refused (budget, policy) or failed
+            try:
+                detail = response.json()["error"]["message"]
+            except (ValueError, KeyError, TypeError):
+                detail = response.text[:200]
+            raise RuntimeError(f"model endpoint answered HTTP {response.status_code}: {detail}")
         data = response.json()
         usage = data.get("usage") or {}
         tokens = (int(usage.get("prompt_tokens", 0)), int(usage.get("completion_tokens", 0)))

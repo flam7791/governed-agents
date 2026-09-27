@@ -173,3 +173,16 @@ async def test_tool_errors_are_reported_not_raised():
     registry = ToolRegistry()
     text, is_error = await registry.call("missing", {})
     assert is_error and "Unknown tool" in text
+
+
+def test_gateway_refusals_surface_with_their_reason():
+    def handler(request):
+        return httpx.Response(
+            402, json={"error": {"message": "Monthly budget reached for team 'agents'."}}
+        )
+
+    llm = JsonActionLLM(
+        "http://gateway/v1", "fast", client=httpx.Client(transport=httpx.MockTransport(handler))
+    )
+    with pytest.raises(RuntimeError, match="HTTP 402: Monthly budget reached"):
+        llm.next_turn("sys", HISTORY, [SEARCH], SCHEMA)

@@ -102,10 +102,58 @@ class Store:
     def list_runs(self, limit: int = 20) -> list[dict]:
         with self.connect() as db:
             rows = db.execute(
-                "SELECT id, scenario, status, created FROM runs ORDER BY created DESC LIMIT ?",
+                "SELECT id, scenario, status, created, updated, state FROM runs "
+                "ORDER BY created DESC LIMIT ?",
                 (limit,),
             ).fetchall()
-        return [dict(r) for r in rows]
+        runs = []
+        for r in rows:
+            state = json.loads(r["state"])
+            runs.append(
+                {
+                    "id": r["id"],
+                    "scenario": r["scenario"],
+                    "status": r["status"],
+                    "created": r["created"],
+                    "updated": r["updated"],
+                    "requested_by": state.get("requested_by"),
+                    "spent_usd": state.get("spent_usd", 0.0),
+                    "error": state.get("error"),
+                }
+            )
+        return runs
+
+    # ------------------------------------------------------------------ figures for monitoring
+
+    def monitoring_figures(self) -> dict:
+        """Aggregates for the metrics endpoint, computed from the durable record."""
+        with self.connect() as db:
+            runs = db.execute(
+                "SELECT scenario, status, COUNT(*) AS n FROM runs GROUP BY scenario, status"
+            ).fetchall()
+            policy = db.execute(
+                "SELECT agent, json_extract(detail, '$.tool') AS tool, "
+                "json_extract(detail, '$.verdict') AS verdict, COUNT(*) AS n FROM events "
+                "WHERE kind = 'policy' GROUP BY agent, tool, verdict"
+            ).fetchall()
+            cost = db.execute(
+                "SELECT r.scenario AS scenario, COUNT(*) AS calls, "
+                "SUM(json_extract(e.detail, '$.cost_usd')) AS cost, "
+                "SUM(json_extract(e.detail, '$.input_tokens')) AS input_tokens, "
+                "SUM(json_extract(e.detail, '$.output_tokens')) AS output_tokens "
+                "FROM events e JOIN runs r ON r.id = e.run_id WHERE e.kind = 'model_call' "
+                "GROUP BY r.scenario"
+            ).fetchall()
+            approvals = db.execute(
+                "SELECT status, COUNT(*) AS n, MIN(created) AS oldest FROM approvals "
+                "GROUP BY status"
+            ).fetchall()
+        return {
+            "runs": [dict(r) for r in runs],
+            "policy": [dict(r) for r in policy],
+            "model_calls": [dict(r) for r in cost],
+            "approvals": [dict(r) for r in approvals],
+        }
 
     # ------------------------------------------------------------------ audit trail
 

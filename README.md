@@ -103,7 +103,7 @@ Requires Python 3.10+.
 python -m venv .venv
 # Windows (PowerShell): .venv\Scripts\Activate.ps1      macOS/Linux: source .venv/bin/activate
 pip install -e ".[dev]"
-pytest                                   # 40 offline tests, scripted models, no key needed
+pytest                                   # 50 offline tests, scripted models, no key needed
 
 export ANTHROPIC_API_KEY=sk-ant-...      # PowerShell: $env:ANTHROPIC_API_KEY="sk-ant-..."
 govagents run briefing_desk examples/briefing_request.txt
@@ -124,6 +124,38 @@ export GOVAGENTS_API_KEY=gw_research_...
 If [policy-evidence-mcp](https://github.com/flam7791/policy-evidence-mcp) is installed, the
 briefing desk's researcher also gets its tools (statistics and document search) over MCP. They
 are classified as read automatically, because that server declares them read-only.
+
+## Running it as a service (0.2)
+
+`govagents serve` exposes the same runtime over HTTP, with a small **approvals page** for the
+people who decide:
+
+```bash
+pip install -e ".[server]"
+export GOVAGENTS_API_TOKENS="alice:requester:<long token>,bob:approver:<long token>,ops:admin:<long token>"
+govagents serve                          # http://127.0.0.1:8090 (the page) and /api/...
+```
+
+- **Identity comes from the token**, never from the request: the approver recorded in the audit
+  trail is the token's owner. Roles: `requester` starts runs, `approver` decides, `admin` does
+  both and can halt runs.
+- **Four eyes:** whoever requested a run cannot approve its actions, even as an admin.
+- **Runs execute in the background:** `POST /api/runs` returns a run id at once; the run goes
+  on until it completes, fails or waits for a person. A decision resumes it.
+- **The approvals page shows proposed actions as text, never HTML**, since arguments can carry
+  content that came from documents.
+- **Metrics** (`/metrics`, optional `GOVAGENTS_METRICS_TOKEN`) come from the durable record, so
+  they survive restarts: runs by status, policy decisions by agent, tool and verdict, model calls,
+  tokens and spend, approvals by status, and the age of the oldest pending approval (an alert
+  when people are not deciding).
+- **MCP servers by URL:** a scenario can name an environment variable holding the server's URL
+  (`"url_env"`), so the same scenario launches the MCP server locally on a laptop and connects
+  to its container in a deployment.
+- **Container:** the [Dockerfile](Dockerfile) runs as a non-root user with a health check; runs,
+  the audit trail and approvals live on a volume. CI builds and checks it on every push.
+
+The full stack (gateway, MCP server, this service, monitoring) runs with one command in
+[governed-ai-platform](https://github.com/flam7791/governed-ai-platform).
 
 ## Evaluation: judging agents by their trajectories
 
@@ -174,9 +206,11 @@ Adding a scenario is configuration, plus tools if it needs new ones.
 
 ## Limitations and roadmap
 
-- [ ] Approvals from a web page or a chat message, with the approver's identity from single sign-on
+- [x] Approvals from a web page, identity from the caller's token, four eyes (0.2)
+- [ ] Single sign-on for approvers, and approvals from a chat message
 - [ ] Per-agent credentials: tools called with the agent's own identity and scopes, not the runtime's
 - [ ] Parallel stages, and a model-chosen next stage within a bounded set
+- [x] Prometheus metrics from the audit trail (0.2)
 - [ ] OpenTelemetry export of the audit trail
 - [ ] Model-graded checks of output quality alongside the trajectory checks
 
@@ -193,12 +227,15 @@ src/govagents/
   demo_tools.py   tracker, drafts, outbox, policy search, cost estimate, patterns
   models.py       manifests, tool specs, decisions
   build.py        wiring from settings
-  cli.py          register | run | approvals | approve | reject | trace | halt | runs | eval
+  cli.py          register | run | approvals | approve | reject | trace | halt | runs | eval | serve
+  server.py       HTTP service: roles, four eyes, background runs, approvals, metrics
+  web.py          the approvals page
 scenarios/        briefing_desk and usecase_triage (fictional knowledge, policy, agents)
 examples/         sample inputs
 evals/            trajectory evaluation cases
 tests/            offline tests with scripted models, a real in-process MCP server, SDK stand-in
 docs/             design decisions
+Dockerfile        container image for the service
 ```
 
 ## License

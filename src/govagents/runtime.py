@@ -127,6 +127,44 @@ class RunHalted(RuntimeError):
     pass
 
 
+class FourEyesViolation(PermissionError):
+    """The person who asked for a run may not approve its actions."""
+
+
+def create_run(store: Store, scenario: str, request: str, requested_by: str | None = None) -> str:
+    """Register a new run (not started yet); returns its id."""
+    state = {
+        "status": "running",
+        "stage_index": 0,
+        "loops": {},
+        "case": {"request": request},
+        "agent_state": None,
+        "spent_usd": 0.0,
+        "error": None,
+        "requested_by": requested_by,
+    }
+    run_id = store.create_run(scenario, state)
+    store.event(run_id, None, "run_started", scenario=scenario, requested_by=requested_by)
+    return run_id
+
+
+def check_decision(store: Store, approval_id: str, by: str) -> dict:
+    """Validate a person's decision before it is recorded; returns the approval.
+
+    Raises KeyError (unknown), ValueError (no longer pending) or FourEyesViolation.
+    """
+    approval = store.get_approval(approval_id)
+    run_id = approval["run_id"]
+    if approval["status"] != "pending" or store.run_status(run_id) != "waiting_approval":
+        raise ValueError(f"Approval {approval_id} is not pending.")
+    _, state = store.load_run(run_id)
+    if state.get("requested_by") and state["requested_by"] == by:
+        raise FourEyesViolation(
+            f"{by} requested run {run_id}, so someone else must decide on its actions."
+        )
+    return approval
+
+
 class Runner:
     def __init__(
         self,
@@ -144,28 +182,21 @@ class Runner:
 
     # ------------------------------------------------------------------ public API
 
-    async def start(self, request: str) -> str:
-        state = {
-            "status": "running",
-            "stage_index": 0,
-            "loops": {},
-            "case": {"request": request},
-            "agent_state": None,
-            "spent_usd": 0.0,
-            "error": None,
-        }
-        run_id = self.store.create_run(self.scenario.name, state)
-        self.store.event(run_id, None, "run_started", scenario=self.scenario.name)
-        await self._drive(run_id, state)
+    async def start(self, request: str, requested_by: str | None = None) -> str:
+        run_id = create_run(self.store, self.scenario.name, request, requested_by)
+        await self.continue_run(run_id)
         return run_id
+
+    async def continue_run(self, run_id: str) -> None:
+        """Drive a created (or running) run until it completes, fails or needs a person."""
+        _, state = self.store.load_run(run_id)
+        await self._drive(run_id, state)
 
     async def decide(self, approval_id: str, approved: bool, by: str, note: str = "") -> str:
         """Record a person's decision on a pending action, then resume the run."""
-        approval = self.store.get_approval(approval_id)
+        approval = check_decision(self.store, approval_id, by)
         run_id = approval["run_id"]
         _, state = self.store.load_run(run_id)
-        if self.store.run_status(run_id) != "waiting_approval":
-            raise ValueError(f"Run {run_id} is not waiting for an approval.")
         self.store.decide_approval(approval_id, approved, by, note)
         self.store.event(
             run_id,

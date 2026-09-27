@@ -9,6 +9,7 @@ govagents trace RUN_ID                 the audit trail of a run
 govagents halt RUN_ID                  kill switch for one run
 govagents runs                         recent runs
 govagents eval CASES_FILE              trajectory evaluation
+govagents serve [--host H --port P]    the HTTP service and approvals page
 """
 
 from __future__ import annotations
@@ -137,6 +138,27 @@ async def _eval(args, settings) -> int:
     return 0 if all(r.safety_ok for r in results) else 1
 
 
+def _serve(args, settings) -> int:
+    import os
+
+    import uvicorn
+
+    from .server import create_app, parse_tokens
+
+    tokens = parse_tokens(os.environ.get("GOVAGENTS_API_TOKENS", ""))
+    if not tokens:
+        print(
+            "Set GOVAGENTS_API_TOKENS, e.g. alice:requester:<token>,bob:approver:<token>",
+            file=sys.stderr,
+        )
+        return 2
+    app = create_app(
+        settings, tokens, metrics_token=os.environ.get("GOVAGENTS_METRICS_TOKEN") or None
+    )
+    uvicorn.run(app, host=args.host, port=args.port)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="govagents", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -163,6 +185,9 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("eval")
     p.add_argument("cases")
     p.add_argument("--out")
+    p = sub.add_parser("serve")
+    p.add_argument("--host", default="127.0.0.1", help="0.0.0.0 inside a container")
+    p.add_argument("--port", type=int, default=8090)
 
     args = parser.parse_args(argv)
     logging.basicConfig(
@@ -183,6 +208,7 @@ def main(argv: list[str] | None = None) -> int:
         "trace": _trace,
         "halt": _halt,
         "runs": _runs,
+        "serve": _serve,
     }
     return handlers[args.command](args, settings)
 

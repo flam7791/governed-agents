@@ -36,3 +36,22 @@ jobs:
           GOVAGENTS_RECORDINGS: evals/recordings
           GOVAGENTS_ENABLE_MCP: "false"
         run: govagents eval evals/cases.jsonl
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image
+        run: docker build -t governed-agents .
+      - name: Start it and check health, identity and the approvals page
+        run: |
+          docker run -d --name agents -p 127.0.0.1:8090:8090 \
+            -e GOVAGENTS_API_TOKENS="ci:approver:ci-approver-token-0001" governed-agents
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8090/healthz && break; sleep 1; done
+          curl -fsS -H "Authorization: Bearer ci-approver-token-0001" http://127.0.0.1:8090/api/me
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8090/api/runs)" = "401"
+          curl -fsS http://127.0.0.1:8090/ | grep -q "Agent approvals"
+          curl -fsS http://127.0.0.1:8090/metrics | grep -q govagents_approvals
+      - name: Container logs
+        if: always()
+        run: docker logs agents

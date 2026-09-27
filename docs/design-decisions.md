@@ -65,3 +65,21 @@ through a person, where data went) as well as outputs. Model replies are recorde
 identifiers made content-derived, so runs replay exactly and CI can run them without a key.
 **Consequences.** Safety regressions fail the build. Changing a prompt means re-recording,
 which is correct: it is a different system.
+
+## 8. Identity from credentials, and four eyes
+
+**Context.** An approval is only worth something if we know who gave it, and if the person who
+wanted the action is not the one who allows it.
+**Decision.** The service takes identity from the caller's token, never from the request body,
+and records that name on every decision. Roles separate requesting from deciding, and the
+runtime refuses a decision by the person who requested the run, whatever their role.
+**Consequences.** The audit trail answers "who allowed this" reliably. Tokens are a stand-in:
+in production, single sign-on would provide the identity and the roles.
+
+## 9. Monitoring from the durable record
+
+**Context.** Counters kept in memory reset on restart and disagree between instances.
+**Decision.** The metrics endpoint computes its figures from the SQLite record (runs, policy
+decisions, model calls, approvals) at scrape time.
+**Consequences.** Figures survive restarts and match the audit trail exactly. The cost is a few
+queries per scrape, which is fine at this scale; a large deployment would pre-aggregate.
