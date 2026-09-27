@@ -1,0 +1,129 @@
+{
+  "name": "usecase_triage",
+  "description": "Assesses a proposed AI use case and prepares a decision record. Submitting the record requires a person's approval.",
+  "toolset": "triage",
+  "policy": {
+    "deny_tools": [],
+    "always_approve": ["submit_decision_record"],
+    "allowed_email_domains": ["aurora.example"],
+    "max_run_cost_usd": 1.0
+  },
+  "mcp_servers": [],
+  "agents": [
+    {
+      "name": "analyst",
+      "purpose": "Register the use case and structure its requirements.",
+      "owner": "AI Office",
+      "autonomy": "draft",
+      "model": "fast",
+      "max_steps": 4,
+      "tools": ["register_usecase"],
+      "instructions": [
+        "Read the proposal. Register it with register_usecase, choosing the data classification from what the proposal says about the information involved (public, internal or restricted; when unsure, choose the higher one).",
+        "Then finish with the structured requirements."
+      ],
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "usecase_id": {"type": "string"},
+          "users": {"type": "string"},
+          "data_classification": {"type": "string"},
+          "expected_benefit": {"type": "string"},
+          "requests_per_month": {"type": "integer"},
+          "requirements": {"type": "array", "items": {"type": "string"}}
+        },
+        "required": ["usecase_id", "users", "data_classification", "expected_benefit", "requests_per_month", "requirements"]
+      }
+    },
+    {
+      "name": "risk_assessor",
+      "purpose": "Propose a risk level, an autonomy level and the controls, citing policy.",
+      "owner": "AI Office",
+      "autonomy": "observe",
+      "model": "strong",
+      "max_steps": 6,
+      "tools": ["lookup_policy"],
+      "instructions": [
+        "Look up the relevant policies (data classification, AI use, intake procedure).",
+        "Propose the risk level (minimal, limited or high), the autonomy the solution should have (observe, draft, act_with_approval or act), and the controls, each justified with a policy citation."
+      ],
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "risk_level": {"type": "string"},
+          "autonomy_level": {"type": "string"},
+          "controls": {"type": "array", "items": {"type": "string"}},
+          "citations": {"type": "array", "items": {"type": "string"}}
+        },
+        "required": ["risk_level", "autonomy_level", "controls", "citations"]
+      }
+    },
+    {
+      "name": "cost_estimator",
+      "purpose": "Estimate the monthly running cost with explicit assumptions.",
+      "owner": "AI Office",
+      "autonomy": "observe",
+      "model": "fast",
+      "max_steps": 4,
+      "tools": ["estimate_cost"],
+      "instructions": [
+        "Estimate tokens per request from the use case (state your assumptions), then use estimate_cost for the fast and the strong model tier."
+      ],
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "monthly_cost_fast_usd": {"type": "number"},
+          "monthly_cost_strong_usd": {"type": "number"},
+          "assumptions": {"type": "string"}
+        },
+        "required": ["monthly_cost_fast_usd", "monthly_cost_strong_usd", "assumptions"]
+      }
+    },
+    {
+      "name": "architect",
+      "purpose": "Choose the reference pattern and the components.",
+      "owner": "AI Lab",
+      "autonomy": "observe",
+      "model": "strong",
+      "max_steps": 4,
+      "tools": ["list_patterns"],
+      "instructions": [
+        "Choose the simplest reference pattern that meets the requirements and the risk assessment, including 'no AI needed' when that is enough. Explain why the more complex options were not chosen."
+      ],
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "pattern": {"type": "string"},
+          "components": {"type": "array", "items": {"type": "string"}},
+          "rationale": {"type": "string"}
+        },
+        "required": ["pattern", "components", "rationale"]
+      }
+    },
+    {
+      "name": "secretary",
+      "purpose": "Compile the decision record and submit it to the approving body.",
+      "owner": "AI Office",
+      "autonomy": "draft",
+      "model": "fast",
+      "max_steps": 4,
+      "tools": ["submit_decision_record"],
+      "instructions": [
+        "Compile a decision record from the case file: summary, requirements, risk level and controls, pattern, monthly cost range, and a recommendation.",
+        "Submit it with submit_decision_record, then finish."
+      ],
+      "output_schema": {
+        "type": "object",
+        "properties": {"submitted": {"type": "boolean"}, "recommendation": {"type": "string"}},
+        "required": ["submitted", "recommendation"]
+      }
+    }
+  ],
+  "stages": [
+    {"agent": "analyst"},
+    {"agent": "risk_assessor"},
+    {"agent": "cost_estimator"},
+    {"agent": "architect"},
+    {"agent": "secretary"}
+  ]
+}

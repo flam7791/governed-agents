@@ -1,0 +1,6 @@
+From: head.of.unit@aurora.example
+Subject: Input needed by 2026-10-15 - AI tools and restricted information
+
+Could you send me a short note answering two questions for the Board meeting:
+1. Which AI tools are approved for staff, and may restricted information be used with them?
+2. How long do we keep AI prompts and outputs, and when do they become records?

@@ -1,0 +1,7 @@
+[
+  {"pattern": "no_ai", "when": "The need is met by a form, a search box, a report or a rule.", "components": ["existing tools"]},
+  {"pattern": "assistant_on_managed_platform", "when": "Staff need help drafting or summarising with information up to internal level.", "components": ["enterprise assistant", "prompt library", "training"]},
+  {"pattern": "knowledge_assistant_rag", "when": "Answers must come from a defined document collection, with citations.", "components": ["document collection with owners", "retrieval index", "evaluation set", "citation display"]},
+  {"pattern": "document_workflow_automation", "when": "A repeated step on documents (extraction, classification, routing) with human checks.", "components": ["workflow engine", "model call through the gateway", "review queue", "audit log"]},
+  {"pattern": "tool_using_agent", "when": "A task needs several tools in a sequence that cannot be fixed in advance.", "components": ["agent runtime with policy engine", "MCP tools", "approval gates", "trajectory evaluation"]}
+]

@@ -1,0 +1,7 @@
+Proposal from the Communications team (owner: comms.lead@aurora.example)
+
+We would like an assistant that drafts first versions of press releases from our published
+reports and internal briefing notes (internal information, nothing restricted). About 10 staff
+would use it, around 300 drafts a month. Today a first draft takes about three hours; we expect
+to save half of that. Drafts would always be edited and approved by a communications officer
+before publication.

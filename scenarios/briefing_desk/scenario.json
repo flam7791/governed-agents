@@ -1,0 +1,138 @@
+{
+  "name": "briefing_desk",
+  "description": "Turns an incoming request for input into a reviewed, cited reply. Sending it out requires a person's approval; publishing is switched off.",
+  "toolset": "briefing",
+  "policy": {
+    "deny_tools": ["publish_to_website"],
+    "always_approve": [],
+    "allowed_email_domains": ["aurora.example"],
+    "max_run_cost_usd": 1.0
+  },
+  "mcp_servers": [
+    {
+      "name": "evidence",
+      "command": "evidence-mcp",
+      "args": ["serve"],
+      "env": {"EVIDENCE_MCP_MAX_CLASSIFICATION": "public"},
+      "optional": true,
+      "note": "The policy-evidence-mcp server (a separate repository). Its tools declare themselves read-only, so they are classified as read."
+    }
+  ],
+  "agents": [
+    {
+      "name": "intake",
+      "purpose": "Log the request and turn it into a structured brief.",
+      "owner": "Directors' Office",
+      "autonomy": "draft",
+      "model": "fast",
+      "max_steps": 4,
+      "tools": ["tracker_create"],
+      "instructions": [
+        "Read the request. Log it with tracker_create (title, requester email, deadline, topic).",
+        "Then finish with the case id and the questions the reply must answer."
+      ],
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "case_id": {"type": "string"},
+          "requester": {"type": "string"},
+          "deadline": {"type": "string"},
+          "questions": {"type": "array", "items": {"type": "string"}}
+        },
+        "required": ["case_id", "requester", "deadline", "questions"]
+      }
+    },
+    {
+      "name": "researcher",
+      "purpose": "Collect evidence for each question, with a citation for every item.",
+      "owner": "Directors' Office",
+      "autonomy": "observe",
+      "model": "strong",
+      "max_steps": 8,
+      "tools": ["search_notes", "search_documents", "search_datasets", "describe_dataset", "get_data"],
+      "instructions": [
+        "For each question in the brief, search for evidence. Keep only what the sources say.",
+        "Every evidence item needs the citation returned by the tool. List questions you could not answer as gaps."
+      ],
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {"point": {"type": "string"}, "citation": {"type": "string"}},
+              "required": ["point", "citation"]
+            }
+          },
+          "gaps": {"type": "array", "items": {"type": "string"}}
+        },
+        "required": ["evidence", "gaps"]
+      }
+    },
+    {
+      "name": "drafter",
+      "purpose": "Write the reply from the evidence only.",
+      "owner": "Directors' Office",
+      "autonomy": "draft",
+      "model": "strong",
+      "max_steps": 4,
+      "tools": ["save_draft"],
+      "instructions": [
+        "Write a short reply (under 200 words) that answers the questions using only the evidence items, citing each as [n] with a numbered source list at the end.",
+        "If a reviewer listed issues in the case file, fix all of them. Save it with save_draft, then finish."
+      ],
+      "output_schema": {
+        "type": "object",
+        "properties": {"draft_id": {"type": "string"}, "draft": {"type": "string"}},
+        "required": ["draft_id", "draft"]
+      }
+    },
+    {
+      "name": "reviewer",
+      "purpose": "Check that every statement in the draft is supported by a cited evidence item.",
+      "owner": "Directors' Office",
+      "autonomy": "observe",
+      "model": "strong",
+      "max_steps": 3,
+      "tools": [],
+      "instructions": [
+        "Compare the draft with the evidence items. Approve only if every factual statement is supported and cited, and the questions are answered or the gaps are stated.",
+        "Otherwise list each issue precisely."
+      ],
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "approved": {"type": "boolean"},
+          "issues": {"type": "array", "items": {"type": "string"}}
+        },
+        "required": ["approved", "issues"]
+      }
+    },
+    {
+      "name": "dispatcher",
+      "purpose": "Send the approved reply to the requester and close the case.",
+      "owner": "Directors' Office",
+      "autonomy": "act_with_approval",
+      "model": "fast",
+      "max_steps": 5,
+      "tools": ["send_email", "tracker_update", "publish_to_website"],
+      "instructions": [
+        "If the reviewer approved the draft, email it to the requester with send_email, then set the case status to 'sent' with tracker_update.",
+        "If the reviewer did not approve it, do not send anything: set the status to 'needs attention' and explain."
+      ],
+      "output_schema": {
+        "type": "object",
+        "properties": {"sent": {"type": "boolean"}, "note": {"type": "string"}},
+        "required": ["sent", "note"]
+      }
+    }
+  ],
+  "stages": [
+    {"agent": "intake"},
+    {"agent": "researcher"},
+    {"agent": "drafter"},
+    {"agent": "reviewer", "loop_back_to": "drafter", "until": "approved", "max_loops": 2},
+    {"agent": "dispatcher"}
+  ]
+}

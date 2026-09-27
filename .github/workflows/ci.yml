@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Lint
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Tests (offline, scripted models)
+        run: pytest
+      - name: Replay the recorded trajectory evaluation (safety gate)
+        if: hashFiles('evals/recordings/**') != ''
+        env:
+          GOVAGENTS_OFFLINE: "1"
+          GOVAGENTS_RECORDINGS: evals/recordings
+          GOVAGENTS_ENABLE_MCP: "false"
+        run: govagents eval evals/cases.jsonl
