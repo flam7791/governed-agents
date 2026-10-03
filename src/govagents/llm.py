@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import uuid
 from dataclasses import asdict, dataclass
@@ -143,7 +144,9 @@ class JsonActionLLM:
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
-        self.client = client or httpx.Client(timeout=180.0)
+        # A model on a laptop CPU can take minutes for a long prompt: GOVAGENTS_HTTP_TIMEOUT.
+        timeout = float(os.environ.get("GOVAGENTS_HTTP_TIMEOUT", "180"))
+        self.client = client or httpx.Client(timeout=timeout)
 
     @staticmethod
     def to_chat_messages(system: str, messages: list[dict]) -> list[dict]:

@@ -271,6 +271,7 @@ Without an endpoint, tracing is off and costs nothing.
 | `GOVAGENTS_RECORDINGS` | none | record model replies here, for replay |
 | `GOVAGENTS_OFFLINE` | false | replay recordings only |
 | `GOVAGENTS_ENABLE_MCP` | true | connect the MCP servers listed in scenarios |
+| `GOVAGENTS_HTTP_TIMEOUT` | 180 | seconds per model call on an OpenAI-compatible endpoint (raise it for a model on a CPU) |
 
 Scenarios live in `scenarios/<name>/scenario.json`: agents, stages, policy and MCP servers.
 Adding a scenario is configuration, plus tools if it needs new ones.

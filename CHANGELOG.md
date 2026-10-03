@@ -8,6 +8,8 @@ Versions follow [semantic versioning](https://semver.org).
   tool call, with policy verdicts; trace context sent to the model endpoint. No content on spans.
 - MCP servers reached by URL can require a bearer token (`"token_env"` in the scenario): the
   agents service authenticates as itself and the server applies that identity's clearance.
+- `GOVAGENTS_HTTP_TIMEOUT` for slow local models; CI replays a local open-weight run when one
+  is recorded.
 
 ## 0.2.0
 
