@@ -1,0 +1,1 @@
+{"action": {"type": "tool", "id": "toolu_01TsPj9r67vpwKVh9rqMum81", "name": "search_notes", "arguments": {"query": "list of approved AI tools names enterprise", "top_k": 5}}, "error": null, "input_tokens": 2003, "output_tokens": 71}

@@ -1,0 +1,1 @@
+{"action": {"type": "tool", "id": "toolu_01KBFUWApC97iabsEcc5vtsm", "name": "search_notes", "arguments": {"query": "latest approved AI tools policy update", "top_k": 5}}, "error": null, "input_tokens": 1214, "output_tokens": 69}

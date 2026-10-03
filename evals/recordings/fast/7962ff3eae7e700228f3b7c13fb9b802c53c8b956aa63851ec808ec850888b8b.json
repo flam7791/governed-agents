@@ -1,0 +1,1 @@
+{"action": {"type": "tool", "id": "toolu_01QGFQAuQ9WkpLFtHruqoMMt", "name": "estimate_cost", "arguments": {"requests_per_month": 40, "input_tokens_per_request": 2500, "output_tokens_per_request": 800, "model_tier": "strong"}}, "error": null, "input_tokens": 1967, "output_tokens": 99}

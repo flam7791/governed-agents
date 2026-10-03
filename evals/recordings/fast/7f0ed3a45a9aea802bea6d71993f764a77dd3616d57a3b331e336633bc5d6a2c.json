@@ -1,0 +1,1 @@
+{"action": {"type": "tool", "id": "toolu_01RuSUDnvCcNKjfrnFae1C8n", "name": "tracker_create", "arguments": {"title": "AI tools and restricted information policy brief", "requester": "head.of.unit@aurora.example", "deadline": "2026-10-15", "topic": "AI tools and information governance"}}, "error": null, "input_tokens": 1117, "output_tokens": 104}
