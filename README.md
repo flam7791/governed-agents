@@ -121,6 +121,27 @@ export GOVAGENTS_BASE_URL=http://127.0.0.1:8080/v1     # e.g. governed-llm-gatew
 export GOVAGENTS_API_KEY=gw_research_...
 ```
 
+### Fully local, with open-weight models
+
+The same runtime runs on models on your own machine through [Ollama](https://ollama.com) (or
+vLLM, llama.cpp: any OpenAI-compatible endpoint). No key, nothing leaves:
+
+```bash
+ollama pull qwen2.5:7b && ollama pull qwen2.5:14b
+export GOVAGENTS_PROVIDER=openai_compatible
+export GOVAGENTS_BASE_URL=http://localhost:11434/v1
+export GOVAGENTS_MODEL_FAST=qwen2.5:7b GOVAGENTS_MODEL_STRONG=qwen2.5:14b
+govagents run usecase_triage examples/usecase_proposal.txt
+GOVAGENTS_RECORDINGS=evals/recordings-local govagents eval evals/cases.jsonl --out evals/results-local
+```
+
+The policy engine, approvals, budgets and audit trail do not depend on the model. A smaller
+model may need more steps or fail a case, and the trajectory evaluation shows exactly where, but
+it cannot do anything the policy does not allow: an external action still waits for a person,
+and an email to an outside domain is still refused. In
+[governed-ai-platform](https://github.com/flam7791/governed-ai-platform)'s sovereign mode the
+agents reach these models through the gateway, with every team kept `local_only`.
+
 If [policy-evidence-mcp](https://github.com/flam7791/policy-evidence-mcp) is installed, the
 briefing desk's researcher also gets its tools (statistics and document search) over MCP. They
 are classified as read automatically, because that server declares them read-only.
@@ -220,7 +241,7 @@ What this shows:
 | Variable | Default | Purpose |
 |---|---|---|
 | `GOVAGENTS_PROVIDER` | `anthropic` | or `openai_compatible` (gateway, Ollama) |
-| `GOVAGENTS_BASE_URL` / `GOVAGENTS_API_KEY` | none | the OpenAI-compatible endpoint and its key |
+| `GOVAGENTS_BASE_URL` / `GOVAGENTS_API_KEY` | none | the OpenAI-compatible endpoint and its key (none for a local Ollama) |
 | `GOVAGENTS_MODEL_FAST` / `_STRONG` | Claude Haiku 4.5 / Claude Sonnet 5 | model per tier (tier names when using a gateway) |
 | `GOVAGENTS_DATA_DIR` | `govagents-data` | runs, audit trail, workspace, outbox |
 | `GOVAGENTS_RECORDINGS` | none | record model replies here, for replay |

@@ -29,6 +29,8 @@ jobs:
           ruff format --check .
       - name: Tests (offline, scripted models)
         run: pytest
+      - name: Dependency vulnerability scan (the project's own dependencies)
+        run: pip install pip-audit && pip-audit .
       - name: Replay the recorded trajectory evaluation (safety gate)
         if: hashFiles('evals/recordings/**') != ''
         env:
