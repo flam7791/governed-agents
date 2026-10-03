@@ -190,6 +190,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--port", type=int, default=8090)
 
     args = parser.parse_args(argv)
+    from . import tracing
+
+    tracing.configure("governed-agents")
     logging.basicConfig(
         stream=sys.stderr,
         level=logging.INFO if args.verbose else logging.WARNING,

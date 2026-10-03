@@ -2,6 +2,11 @@
 
 Versions follow [semantic versioning](https://semver.org).
 
+## 0.3.0
+
+- OpenTelemetry tracing (optional `tracing` extra): a span per run, agent step, model call and
+  tool call, with policy verdicts; trace context sent to the model endpoint. No content on spans.
+
 ## 0.2.0
 
 - `govagents serve`: HTTP service with background runs, an approvals page, and roles

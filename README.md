@@ -238,6 +238,26 @@ What this shows:
 - **The injection case cost three times as much** (21 model calls instead of 13). Its trace
   shows where the extra steps went; the budget per run is what keeps cases like this bounded.
 
+## Tracing (0.3)
+
+Set `OTEL_EXPORTER_OTLP_ENDPOINT` (Jaeger, Grafana Tempo, or an OpenTelemetry Collector in front
+of Azure Monitor) and install the `tracing` extra (`pip install ".[tracing]"`, included in the
+container image). A run becomes one trace, named with the OpenTelemetry generative-AI conventions:
+
+```
+agent_run briefing_desk                        run id, scenario, final status
+├── invoke_agent researcher                    gen_ai.agent.name, autonomy, model tier, outcome
+│   ├── chat claude-haiku-4-5                  gen_ai.request.model, gen_ai.usage.*
+│   └── execute_tool search_documents          action class, policy verdict and reason
+└── invoke_agent drafter
+    └── execute_tool send_email                verdict "approve": ended, waiting for a person
+```
+
+The model client sends the W3C `traceparent` header, so with governed-llm-gateway in front the
+gateway's spans join the same trace. **Prompts, answers and tool arguments are never put on a
+span**: the audit trail stays the record of content, the trace the record of time and decisions.
+Without an endpoint, tracing is off and costs nothing.
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -260,7 +280,7 @@ Adding a scenario is configuration, plus tools if it needs new ones.
 - [ ] Per-agent credentials: tools called with the agent's own identity and scopes, not the runtime's
 - [ ] Parallel stages, and a model-chosen next stage within a bounded set
 - [x] Prometheus metrics from the audit trail (0.2)
-- [ ] OpenTelemetry export of the audit trail
+- [x] OpenTelemetry traces: run, agent, model and tool spans, joined with the gateway's (0.3)
 - [ ] Model-graded checks of output quality alongside the trajectory checks
 
 ## Project layout

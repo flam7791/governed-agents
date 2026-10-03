@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "governed-agents"
-version = "0.2.0"
+version = "0.3.0"
 description = "A reference architecture for governed multi-agent systems: specialist agents, MCP tools, autonomy enforced in code, durable human approval (CLI or web), full audit trace, metrics and trajectory evaluation."
 readme = "README.md"
 license = "MIT"
@@ -16,11 +16,13 @@ dependencies = [
     "anthropic>=1.0,<2",  # Claude with native tool use
     "httpx>=0.28.1,<1",     # OpenAI-compatible endpoints (an LLM gateway, Ollama)
     "mcp>=2.2,<3",        # tools from MCP servers
+    "opentelemetry-api>=1.25,<2",  # tracing hooks; no-op unless the tracing extra is set up
 ]
 
 [project.optional-dependencies]
 # The HTTP service, approvals page and metrics (govagents serve)
 server = ["fastapi>=0.110", "uvicorn>=0.29", "prometheus-client>=0.20"]
+tracing = ["opentelemetry-sdk>=1.25,<2", "opentelemetry-exporter-otlp-proto-http>=1.25,<2"]
 dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
@@ -28,6 +30,7 @@ dev = [
     "fastapi>=0.110",
     "uvicorn>=0.29",
     "prometheus-client>=0.20",
+    "opentelemetry-sdk>=1.25,<2",
 ]
 
 [project.scripts]

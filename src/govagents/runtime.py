@@ -19,12 +19,15 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from opentelemetry.trace import SpanKind, Status, StatusCode
+
 from .config import Settings
 from .llm import AgentLLM, ReplayMiss
 from .models import AgentManifest
 from .policy import Policy
 from .store import Store
 from .tools import ToolRegistry
+from .tracing import tracer
 
 log = logging.getLogger(__name__)
 
@@ -210,7 +213,17 @@ class Runner:
         agent_state = state["agent_state"]
         pending = agent_state.pop("pending")
         if approved:
-            content, is_error = await self.registry.call(pending["name"], pending["arguments"])
+            with tracer.start_as_current_span(f"execute_tool {pending['name']}") as span:
+                span.set_attributes(
+                    {
+                        "gen_ai.operation.name": "execute_tool",
+                        "gen_ai.tool.name": pending["name"],
+                        "govagents.run_id": run_id,
+                        "govagents.approval_id": approval_id,
+                        "govagents.approved_by": by,
+                    }
+                )
+                content, is_error = await self.registry.call(pending["name"], pending["arguments"])
             self.store.event(
                 run_id,
                 approval["agent"],
@@ -252,6 +265,14 @@ class Runner:
         self.store.event(run_id, None, f"run_{status}", error=error, spent_usd=state["spent_usd"])
 
     async def _drive(self, run_id: str, state: dict) -> None:
+        with tracer.start_as_current_span(f"agent_run {self.scenario.name}") as span:
+            span.set_attributes(
+                {"govagents.run_id": run_id, "govagents.scenario": self.scenario.name}
+            )
+            await self._drive_stages(run_id, state)
+            span.set_attribute("govagents.status", state.get("status", ""))
+
+    async def _drive_stages(self, run_id: str, state: dict) -> None:
         stages = self.scenario.stages
         while state["stage_index"] < len(stages):
             stage = stages[state["stage_index"]]
@@ -314,6 +335,21 @@ class Runner:
 
     async def _advance_agent(self, run_id: str, state: dict, agent: AgentManifest) -> str:
         """Run one agent until it finishes, needs approval, or exhausts its budget."""
+        with tracer.start_as_current_span(f"invoke_agent {agent.name}") as span:
+            span.set_attributes(
+                {
+                    "gen_ai.operation.name": "invoke_agent",
+                    "gen_ai.agent.name": agent.name,
+                    "govagents.run_id": run_id,
+                    "govagents.autonomy": agent.autonomy,
+                    "govagents.model_tier": agent.model,
+                }
+            )
+            outcome = await self._advance_agent_steps(run_id, state, agent)
+            span.set_attribute("govagents.outcome", outcome)
+            return outcome
+
+    async def _advance_agent_steps(self, run_id: str, state: dict, agent: AgentManifest) -> str:
         agent_state = state["agent_state"]
         llm = self.llm_for_tier(agent.model)
         tools = self.registry.specs_for(agent.tools)
@@ -326,9 +362,19 @@ class Runner:
         while agent_state["steps"] < agent.max_steps:
             if self._halted(run_id):
                 raise RunHalted()
-            turn = await asyncio.to_thread(
-                llm.next_turn, system, messages, tools, agent.output_schema
-            )
+            with tracer.start_as_current_span(f"chat {agent.model}", kind=SpanKind.CLIENT) as call:
+                call.set_attributes(
+                    {"gen_ai.operation.name": "chat", "gen_ai.request.model": agent.model}
+                )
+                turn = await asyncio.to_thread(
+                    llm.next_turn, system, messages, tools, agent.output_schema
+                )
+                call.set_attributes(
+                    {
+                        "gen_ai.usage.input_tokens": turn.input_tokens,
+                        "gen_ai.usage.output_tokens": turn.output_tokens,
+                    }
+                )
             cost = self.settings.cost(agent.model, turn.input_tokens, turn.output_tokens)
             state["spent_usd"] = round(state["spent_usd"] + cost, 6)
             self.store.event(
@@ -381,6 +427,16 @@ class Runner:
                 )
                 continue
             decision = self.scenario.policy.decide(agent, spec, arguments)
+            span = tracer.start_span(f"execute_tool {name}", kind=SpanKind.INTERNAL)
+            span.set_attributes(
+                {
+                    "gen_ai.operation.name": "execute_tool",
+                    "gen_ai.tool.name": name,
+                    "govagents.action_class": spec.action_class,
+                    "govagents.policy.verdict": decision.verdict,
+                    "govagents.policy.reason": decision.reason,
+                }
+            )
             self.store.event(
                 run_id,
                 agent.name,
@@ -390,6 +446,8 @@ class Runner:
                 reason=decision.reason,
                 action_class=spec.action_class,
             )
+            if decision.verdict != "allow":
+                span.end()  # refused or waiting for a person: no execution to time
             if decision.verdict == "deny":
                 messages.append(
                     {
@@ -416,7 +474,13 @@ class Runner:
                 )
                 return "waiting_approval"
 
-            content, is_error = await self.registry.call(name, arguments)
+            try:
+                content, is_error = await self.registry.call(name, arguments)
+                span.set_attribute("govagents.tool.is_error", is_error)
+                if is_error:
+                    span.set_status(Status(StatusCode.ERROR, "tool returned an error"))
+            finally:
+                span.end()
             self.store.event(
                 run_id,
                 agent.name,

@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Protocol
 
 import httpx
+from opentelemetry import propagate
 
 from .models import ToolSpec
 
@@ -192,9 +193,11 @@ class JsonActionLLM:
         protocol = JSON_PROTOCOL.format(
             output_schema=json.dumps(_finish_schema(output_schema)), tools=catalogue or "(none)"
         )
+        headers = dict(self.headers)
+        propagate.inject(headers)  # W3C traceparent: the gateway continues this trace
         response = self.client.post(
             f"{self.base_url}/chat/completions",
-            headers=self.headers,
+            headers=headers,
             json={
                 "model": self.model,
                 "messages": self.to_chat_messages(f"{system}\n\n{protocol}", messages),
