@@ -22,7 +22,7 @@ dependencies = [
 # The HTTP service, approvals page and metrics (govagents serve)
 server = ["fastapi>=0.110", "uvicorn>=0.29", "prometheus-client>=0.20"]
 dev = [
-    "pytest>=8",
+    "pytest>=9.1.1",
     "pytest-asyncio>=0.24",
     "ruff>=0.6",
     "fastapi>=0.110",
