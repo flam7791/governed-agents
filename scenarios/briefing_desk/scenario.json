@@ -12,6 +12,7 @@
     {
       "name": "evidence",
       "url_env": "GOVAGENTS_EVIDENCE_MCP_URL",
+      "token_env": "GOVAGENTS_EVIDENCE_MCP_TOKEN",
       "command": "evidence-mcp",
       "args": ["serve"],
       "env": {"EVIDENCE_MCP_MAX_CLASSIFICATION": "public"},

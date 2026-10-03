@@ -60,6 +60,18 @@ def mcp_target(server: dict):
     )
 
 
+def mcp_headers(server: dict) -> dict[str, str] | None:
+    """Headers for an MCP server reached by URL: a bearer token named by "token_env".
+
+    The token identifies this agents service to the MCP server, which decides what it may see
+    (policy-evidence-mcp maps it to a clearance). It comes from the environment, never the
+    scenario file.
+    """
+    name = server.get("token_env")
+    token = os.environ.get(name) if name else None
+    return {"Authorization": f"Bearer {token}"} if token else None
+
+
 @asynccontextmanager
 async def open_runner(settings: Settings, scenario_name: str, llm_for_tier=None):
     scenario = Scenario.load(settings.scenarios_dir / scenario_name)
@@ -77,7 +89,10 @@ async def open_runner(settings: Settings, scenario_name: str, llm_for_tier=None)
     for server in scenario.mcp_servers if settings.enable_mcp else []:
         try:
             added = await registry.connect_mcp(
-                server["name"], mcp_target(server), server.get("action_overrides")
+                server["name"],
+                mcp_target(server),
+                server.get("action_overrides"),
+                headers=mcp_headers(server),
             )
             log.warning("connected MCP server %s: %s", server["name"], ", ".join(added))
         except Exception as exc:  # e.g. the server is not installed on this machine

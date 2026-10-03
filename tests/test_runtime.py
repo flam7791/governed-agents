@@ -1,5 +1,6 @@
 """End-to-end runs of both scenarios with scripted models: every governance path."""
 
+import asyncio
 import json
 
 import pytest
@@ -317,3 +318,55 @@ async def test_researcher_can_use_a_real_mcp_server_over_stdio(settings):
         await runner.start(REQUEST)
     researcher_tools = next(c for c in llm.calls if c["agent"] == "researcher")["tools"]
     assert "search_documents" in researcher_tools
+
+
+@pytest.mark.skipif(
+    __import__("shutil").which("evidence-mcp") is None,
+    reason="policy-evidence-mcp is not installed in this environment",
+)
+async def test_mcp_server_over_http_with_a_bearer_token(tmp_path):
+    """The agents service authenticates to an MCP server that requires a token."""
+    import socket
+    import subprocess
+
+    from govagents.tools import ToolRegistry
+
+    tokens = tmp_path / "tokens.json"
+    token = subprocess.run(
+        ["evidence-mcp", "token", "create", "--name", "agents", "--clearance", "internal"],
+        env={**__import__("os").environ, "EVIDENCE_MCP_TOKENS_FILE": str(tokens)},
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()[-1]
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    args = ["--transport", "streamable-http", "--port", str(port)]
+    args += ["--auth", "tokens", "--tokens-file", str(tokens)]
+    proc = subprocess.Popen(
+        ["evidence-mcp", "serve", *args], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
+    try:
+        for _ in range(100):
+            try:
+                socket.create_connection(("127.0.0.1", port), 0.2).close()
+                break
+            except OSError:
+                await asyncio.sleep(0.1)
+        url = f"http://127.0.0.1:{port}/mcp"
+        registry = ToolRegistry()
+        try:
+            added = await registry.connect_mcp(
+                "evidence", url, headers={"Authorization": f"Bearer {token}"}
+            )
+            assert "search_documents" in added
+        finally:
+            await registry.aclose()
+        anonymous = ToolRegistry()
+        with pytest.raises(Exception):  # noqa: B017 - an exception group around the 401
+            await anonymous.connect_mcp("evidence", url)
+        await anonymous.aclose()
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)

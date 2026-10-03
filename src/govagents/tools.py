@@ -84,11 +84,24 @@ class ToolRegistry:
         return text, is_error
 
     async def connect_mcp(
-        self, name: str, server, action_overrides: dict[str, str] | None = None
+        self,
+        name: str,
+        server,
+        action_overrides: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> list[str]:
-        """Connect an MCP server (StdioServerParameters, URL or in-process server)."""
+        """Connect an MCP server (StdioServerParameters, URL or in-process server).
+
+        `headers` (for a URL) carry the credential the server authenticates this service with.
+        """
         from mcp import Client
 
+        if headers and isinstance(server, str):
+            from mcp.client.streamable_http import streamable_http_client
+            from mcp.shared._httpx_utils import create_mcp_http_client
+
+            http = await self._stack.enter_async_context(create_mcp_http_client(headers=headers))
+            server = streamable_http_client(server, http_client=http)
         client = await self._stack.enter_async_context(Client(server))
         overrides = action_overrides or {}
         added = []

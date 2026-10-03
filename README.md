@@ -173,7 +173,9 @@ govagents serve                          # http://127.0.0.1:8090 (the page) and 
   when people are not deciding).
 - **MCP servers by URL:** a scenario can name an environment variable holding the server's URL
   (`"url_env"`), so the same scenario launches the MCP server locally on a laptop and connects
-  to its container in a deployment.
+  to its container in a deployment. `"token_env"` names the variable holding the service's bearer
+  token for that server (0.3): policy-evidence-mcp maps it to a clearance, so the server, not the
+  agent, decides which documents the agents service may read.
 - **Container:** the [Dockerfile](Dockerfile) runs as a non-root user with a health check; runs,
   the audit trail and approvals live on a volume. CI builds and checks it on every push.
 

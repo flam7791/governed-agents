@@ -6,6 +6,8 @@ Versions follow [semantic versioning](https://semver.org).
 
 - OpenTelemetry tracing (optional `tracing` extra): a span per run, agent step, model call and
   tool call, with policy verdicts; trace context sent to the model endpoint. No content on spans.
+- MCP servers reached by URL can require a bearer token (`"token_env"` in the scenario): the
+  agents service authenticates as itself and the server applies that identity's clearance.
 
 ## 0.2.0
 

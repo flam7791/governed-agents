@@ -161,3 +161,14 @@ def test_mcp_servers_are_reached_by_url_when_one_is_configured(monkeypatch):
     assert mcp_target(server).command == "evidence-mcp"  # stdio on a laptop
     monkeypatch.setenv("EVIDENCE_URL", "http://evidence-mcp:8000/mcp")
     assert mcp_target(server) == "http://evidence-mcp:8000/mcp"  # HTTP in a deployment
+
+
+def test_mcp_token_comes_from_the_environment(monkeypatch):
+    from govagents.build import mcp_headers
+
+    server = {"name": "evidence", "url_env": "EVIDENCE_URL", "token_env": "EVIDENCE_TOKEN"}
+    monkeypatch.delenv("EVIDENCE_TOKEN", raising=False)
+    assert mcp_headers(server) is None
+    monkeypatch.setenv("EVIDENCE_TOKEN", "emcp_secret")
+    assert mcp_headers(server) == {"Authorization": "Bearer emcp_secret"}
+    assert mcp_headers({"name": "x"}) is None
