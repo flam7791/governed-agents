@@ -24,7 +24,7 @@ server = ["fastapi>=0.110", "uvicorn>=0.29", "prometheus-client>=0.20"]
 dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
-    "ruff>=0.6",
+    "ruff>=0.16.9",
     "fastapi>=0.110",
     "uvicorn>=0.29",
     "prometheus-client>=0.20",
