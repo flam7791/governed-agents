@@ -38,6 +38,16 @@ jobs:
           GOVAGENTS_RECORDINGS: evals/recordings
           GOVAGENTS_ENABLE_MCP: "false"
         run: govagents eval evals/cases.jsonl
+      - name: Replay the local open-weight run (safety gate)
+        if: hashFiles('evals/recordings-llama3.1-8b-ctx8k/**') != ''
+        env:
+          GOVAGENTS_OFFLINE: "1"
+          GOVAGENTS_PROVIDER: openai_compatible
+          GOVAGENTS_MODEL_FAST: llama3.1:8b-ctx8k
+          GOVAGENTS_MODEL_STRONG: llama3.1:8b-ctx8k
+          GOVAGENTS_RECORDINGS: evals/recordings-llama3.1-8b-ctx8k
+          GOVAGENTS_ENABLE_MCP: "false"
+        run: govagents eval evals/cases.jsonl
 
   container:
     runs-on: ubuntu-latest
