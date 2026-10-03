@@ -1,5 +1,7 @@
 # governed-agents
 
+[![CI](https://github.com/flam7791/governed-agents/actions/workflows/ci.yml/badge.svg)](https://github.com/flam7791/governed-agents/actions/workflows/ci.yml) [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE) ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)
+
 A reference architecture for **governed multi-agent systems**: specialist agents that use real
 tools, where what each agent may do is **enforced in code**. Risky actions wait for a
 **person's approval**, and every step lands in an **audit trail**. Agents are evaluated on what
