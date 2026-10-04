@@ -19,6 +19,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from opentelemetry import trace
 from opentelemetry.trace import SpanKind, Status, StatusCode
 
 from .config import Settings
@@ -475,7 +476,9 @@ class Runner:
                 return "waiting_approval"
 
             try:
-                content, is_error = await self.registry.call(name, arguments)
+                # The tool call runs inside the span, so an MCP server's spans become its children.
+                with trace.use_span(span, end_on_exit=False):
+                    content, is_error = await self.registry.call(name, arguments)
                 span.set_attribute("govagents.tool.is_error", is_error)
                 if is_error:
                     span.set_status(Status(StatusCode.ERROR, "tool returned an error"))

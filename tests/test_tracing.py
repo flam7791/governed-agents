@@ -64,3 +64,25 @@ def test_model_calls_carry_the_trace_to_the_gateway():
         llm.next_turn("system", [{"role": "user", "content": "hi"}], [], {})
         trace_id = format(span.get_span_context().trace_id, "032x")
     assert seen["traceparent"].split("-")[1] == trace_id
+
+
+async def test_work_done_by_a_tool_is_a_child_of_its_execute_tool_span(settings):
+    """An MCP client call made by a tool, for example, nests under the tool's span."""
+    EXPORTER.clear()
+    async with runner_for(settings, "briefing_desk", ScriptedLLM(briefing_script())) as runner:
+        original = runner.registry.call
+
+        async def call(name, arguments):
+            with tracing.tracer.start_as_current_span(f"inside {name}"):
+                return await original(name, arguments)
+
+        runner.registry.call = call
+        await runner.start(REQUEST)
+
+    spans = EXPORTER.get_finished_spans()
+    by_id = {s.context.span_id: s for s in spans}
+    inside = [s for s in spans if s.name.startswith("inside ")]
+    assert inside
+    for span in inside:
+        parent = by_id[span.parent.span_id]
+        assert parent.name == "execute_tool " + span.name.removeprefix("inside ")

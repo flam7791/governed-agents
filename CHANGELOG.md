@@ -2,6 +2,10 @@
 
 Versions follow [semantic versioning](https://semver.org).
 
+## 0.3.1
+
+- A tool's work (an MCP call, for example) is traced as a child of its `execute_tool` span.
+
 ## 0.3.0
 
 - OpenTelemetry tracing (optional `tracing` extra): a span per run, agent step, model call and
