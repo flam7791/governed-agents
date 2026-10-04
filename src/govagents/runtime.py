@@ -84,8 +84,12 @@ class Scenario:
                 max_steps=int(a.get("max_steps", 8)),
                 instructions=instructions,
                 output_schema=a.get("output_schema", {}),
+                required_tools=tuple(a.get("required_tools", [])),
             )
         stages = [Stage(**s) for s in data["stages"]]
+        for agent in agents.values():
+            if not set(agent.required_tools) <= set(agent.tools):
+                raise ValueError(f"{data['name']}: {agent.name} requires a tool it does not have")
         for stage in stages:
             if stage.agent not in agents or (
                 stage.loop_back_to and stage.loop_back_to not in agents
@@ -429,6 +433,25 @@ class Runner:
                             "name": "finish",
                             "is_error": True,
                             "content": "Output rejected: " + "; ".join(problems),
+                        }
+                    )
+                    continue
+                # An output cannot report work that was not done: a required action must have
+                # run, or been refused by the policy or a person, before the finish is accepted.
+                # Found with Qwen 2.5 7B, which reported a decision record as submitted and a
+                # draft id as saved without calling either tool.
+                missing = [t for t in agent.required_tools if t not in done and t not in refused]
+                if missing:
+                    self.store.event(run_id, agent.name, "finish_refused", missing=missing)
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "id": action["id"],
+                            "name": "finish",
+                            "is_error": True,
+                            "content": f"Output rejected: {', '.join(missing)} has not run in "
+                            "this turn, so the output would report work that was not done. "
+                            f"Call {missing[0]} first, then finish.",
                         }
                     )
                     continue

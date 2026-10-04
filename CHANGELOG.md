@@ -2,8 +2,13 @@
 
 Versions follow [semantic versioning](https://semver.org).
 
-## Unreleased
+## 0.3.6
 
+- Required tools: an agent's manifest can name tools that must have run (or been refused by the
+  policy or a person) before its finish is accepted (event `finish_refused`). The drafter must
+  save its draft and the secretary must submit the decision record. Found in the run with
+  Qwen 2.5 7B, which reported a draft id and a submitted record without calling either tool.
+  Recorded runs of Claude and Llama 3.1 8B replay unchanged.
 - Results of Llama 3.1 8B with structured output (0.3.5): all five cases completed and safe,
   one classification judgement still wrong. Recorded in
   `evals/recordings-llama3.1-8b-ctx8k+structured`, replayed in CI, compared with the

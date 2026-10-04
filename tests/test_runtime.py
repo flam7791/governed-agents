@@ -196,9 +196,8 @@ async def test_a_paused_run_resumes_after_a_restart(settings):
     assert remaining.calls[0]["messages"][-1]["role"] == "tool"  # resumed with the send result
 
 
-async def test_triage_decision_record_always_needs_a_person(settings):
-    proposal = (ROOT / "examples" / "usecase_proposal.txt").read_text(encoding="utf-8")
-    script = {
+def triage_script() -> dict:
+    return {
         "analyst": [
             tool(
                 "register_usecase",
@@ -264,6 +263,11 @@ async def test_triage_decision_record_always_needs_a_person(settings):
             finish(submitted=True, recommendation="approve_with_conditions"),
         ],
     }
+
+
+async def test_triage_decision_record_always_needs_a_person(settings):
+    proposal = (ROOT / "examples" / "usecase_proposal.txt").read_text(encoding="utf-8")
+    script = triage_script()
     llm = ScriptedLLM(script)
     async with runner_for(settings, "usecase_triage", llm) as runner:
         run_id = await runner.start(proposal)
@@ -480,3 +484,47 @@ def test_cost_estimates_use_the_organisation_prices_not_the_run_prices(monkeypat
     settings = Settings.from_env()
     assert settings.cost("fast", 1_000_000, 0) == 0
     assert settings.estimate_prices["fast"] == DEFAULT_PRICES["fast"]
+
+
+async def test_a_finish_cannot_report_work_that_was_not_done(settings):
+    # Qwen 2.5 7B finished the drafter with an invented draft id, without calling save_draft.
+    script = briefing_script()
+    save, saved_finish = script["drafter"][0], script["drafter"][1]
+    script["drafter"] = [
+        finish(draft_id="DRAFT-invented", draft="Approved tools are ... [1]"),
+        save,
+        saved_finish,
+    ]
+    async with runner_for(settings, "briefing_desk", ScriptedLLM(script)) as runner:
+        run_id = await runner.start(REQUEST)
+        events = runner.store.events(run_id)
+    refused = [e for e in events if e["kind"] == "finish_refused"]
+    assert [e["detail"]["missing"] for e in refused] == [["save_draft"]]
+    drafted = [e for e in events if e["kind"] == "agent_finished" and e["agent"] == "drafter"]
+    assert drafted[0]["detail"]["output"]["draft_id"] != "DRAFT-invented"
+
+
+async def test_a_rejected_required_action_still_lets_the_agent_finish(settings):
+    # A person's no counts as done for the requirement: the secretary reports it and finishes.
+    proposal = (ROOT / "examples" / "usecase_proposal.txt").read_text(encoding="utf-8")
+    script = triage_script()
+    script["secretary"][1] = finish(submitted=False, recommendation="approve_with_conditions")
+    async with runner_for(settings, "usecase_triage", ScriptedLLM(script)) as runner:
+        run_id = await runner.start(proposal)
+        approval = runner.store.pending_approvals()[0]
+        await runner.decide(approval["id"], False, "AI Office head", "Needs a DPIA first.")
+        events = runner.store.events(run_id)
+    assert runner.store.run_status(run_id) == "completed"
+    assert not any(e["kind"] == "finish_refused" for e in events)
+
+
+def test_a_required_tool_must_be_one_of_the_agent_tools(tmp_path):
+    from govagents.runtime import Scenario
+
+    data = json.loads((ROOT / "scenarios" / "briefing_desk" / "scenario.json").read_text())
+    for agent in data["agents"]:
+        if agent["name"] == "drafter":
+            agent["required_tools"] = ["send_email"]
+    (tmp_path / "scenario.json").write_text(json.dumps(data))
+    with pytest.raises(ValueError, match="requires a tool it does not have"):
+        Scenario.load(tmp_path)

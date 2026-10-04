@@ -108,6 +108,7 @@
       "model": "fast",
       "max_steps": 4,
       "tools": ["submit_decision_record"],
+      "required_tools": ["submit_decision_record"],
       "instructions": [
         "Compile a decision record from the case file: summary, requirements, risk level and controls, pattern, monthly cost range, and a recommendation.",
         "Submit it with submit_decision_record, then finish."

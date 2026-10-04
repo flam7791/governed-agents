@@ -74,6 +74,12 @@ Checks run in order, and the first that fails decides:
 On top of that:
 
 - **Budgets.** Each agent has a step limit, and each run has a model-cost limit.
+- **Within one turn of an agent**, a write runs at most once, an identical call never runs
+  twice, and an action a person or the policy refused is not requested again.
+- **No reported work that was not done.** An agent's manifest can name required tools (the
+  drafter's `save_draft`, the secretary's `submit_decision_record`): a finish is rejected until
+  each has run or been refused, so an output cannot claim a saved draft or a submitted record
+  that does not exist.
 - **Kill switches.** `govagents halt RUN_ID` stops one run and cancels its pending approvals.
   A `HALT` file in the data folder stops every run before its next model call.
 - **Prompt injection.** Tool results and documents are passed as data, and agents are told
@@ -83,8 +89,8 @@ On top of that:
 
 ### The agent register
 
-Every agent is declared in a manifest: purpose, owner, autonomy, tools, model tier and step
-budget. `govagents register` prints the register (`--csv` to export it):
+Every agent is declared in a manifest: purpose, owner, autonomy, tools, required tools, model
+tier and step budget. `govagents register` prints the register (`--csv` to export it):
 
 ```
 briefing_desk   intake          draft              fast    steps≤4   tools: tracker_create

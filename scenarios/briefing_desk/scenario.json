@@ -80,6 +80,7 @@
       "model": "strong",
       "max_steps": 4,
       "tools": ["save_draft"],
+      "required_tools": ["save_draft"],
       "instructions": [
         "Write a short reply (under 200 words) that answers the questions using only the evidence items, citing each as [n] with a numbered source list at the end.",
         "If a reviewer listed issues in the case file, fix all of them. Save it with save_draft, then finish."

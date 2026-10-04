@@ -51,6 +51,9 @@ class AgentManifest:
     max_steps: int
     instructions: str
     output_schema: dict = field(default_factory=dict)
+    # Tools the agent must have called (run, or refused by the policy or a person) before its
+    # finish is accepted: an output cannot report work that was not done.
+    required_tools: tuple[str, ...] = ()
 
     def __post_init__(self):
         if self.autonomy not in AUTONOMY_LEVELS:
@@ -59,6 +62,7 @@ class AgentManifest:
     def to_row(self) -> dict:
         row = asdict(self)
         row["tools"] = ", ".join(self.tools)
+        row["required_tools"] = ", ".join(self.required_tools)
         row.pop("instructions")
         row.pop("output_schema")
         return row
