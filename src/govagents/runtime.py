@@ -127,6 +127,16 @@ def missing_fields(output: dict, schema: dict) -> list[str]:
 # --------------------------------------------------------------------------- runner
 
 
+def _spent(tool, done: list, refused: list) -> bool:
+    """True when offering the tool again in this turn cannot help (see _advance_agent_steps)."""
+    if tool.name in refused:
+        return True
+    if tool.name not in done:
+        return False
+    no_arguments = not (tool.input_schema or {}).get("properties")
+    return tool.action_class != "read" or no_arguments
+
+
 class RunHalted(RuntimeError):
     pass
 
@@ -239,6 +249,7 @@ class Runner:
         else:
             content = f"A person rejected this action ({by}): {note or 'no reason given'}."
             is_error = True
+            agent_state.setdefault("refused", []).append(pending["name"])
         agent_state["messages"].append(
             {
                 "role": "tool",
@@ -366,11 +377,15 @@ class Runner:
             if self._halted(run_id):
                 raise RunHalted()
             done = agent_state.setdefault("done", [])
+            calls = agent_state.setdefault("calls", [])
+            refused = agent_state.setdefault("refused", [])
             offered = tools
             if self.settings.structured_output:
-                # A write or external tool runs once per turn of an agent: once done, it is no
-                # longer offered, so a constrained model moves on or finishes.
-                offered = [t for t in tools if t.action_class == "read" or t.name not in done]
+                # Within one turn of an agent, nothing that cannot help is offered again: a
+                # write or external tool once done, a tool without arguments once called (same
+                # answer), and a tool refused by the policy or by a person. A constrained model
+                # then moves on or finishes.
+                offered = [t for t in tools if not _spent(t, done, refused)]
             with tracer.start_as_current_span(f"chat {agent.model}", kind=SpanKind.CLIENT) as call:
                 call.set_attributes(
                     {"gen_ai.operation.name": "chat", "gen_ai.request.model": agent.model}
@@ -435,8 +450,18 @@ class Runner:
                     }
                 )
                 continue
-            if spec.action_class != "read" and name in done:
-                # Never run the same write twice in one turn (a small model may loop on it).
+            signature = [name, json.dumps(arguments, sort_keys=True)]
+            repeat = None
+            if name in refused and spec.action_class != "read":
+                # A person's (or the policy's) no is final for this turn: no second request.
+                repeat = f"{name} was refused in this turn. Do not propose it again: finish "
+                repeat += "and say what was not done."
+            elif (spec.action_class != "read" and name in done) or signature in calls:
+                # Never run the same write twice in one turn, nor the same call: the result is
+                # already above (a small model may loop on it).
+                repeat = f"{name} already ran in this turn; its result is above. "
+                repeat += "Do not repeat it: use another tool or finish."
+            if repeat:
                 self.store.event(run_id, agent.name, "repeat_skipped", tool=name)
                 messages.append(
                     {
@@ -444,8 +469,7 @@ class Runner:
                         "id": action["id"],
                         "name": name,
                         "is_error": True,
-                        "content": f"{name} already ran in this turn; its result is above. "
-                        "Do not repeat it: use another tool or finish.",
+                        "content": repeat,
                     }
                 )
                 continue
@@ -472,6 +496,7 @@ class Runner:
             if decision.verdict != "allow":
                 span.end()  # refused or waiting for a person: no execution to time
             if decision.verdict == "deny":
+                refused.append(name)
                 messages.append(
                     {
                         "role": "tool",
@@ -504,6 +529,7 @@ class Runner:
                 span.set_attribute("govagents.tool.is_error", is_error)
                 if not is_error:
                     done.append(name)
+                    calls.append(signature)
                 if is_error:
                     span.set_status(Status(StatusCode.ERROR, "tool returned an error"))
             finally:

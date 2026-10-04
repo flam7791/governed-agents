@@ -439,3 +439,44 @@ async def test_with_structured_output_a_done_write_is_no_longer_offered(settings
         await runner.start(REQUEST)
     intake = [c["tools"] for c in llm.calls if c["agent"] == "intake"]
     assert "tracker_create" in intake[0] and "tracker_create" not in intake[1]
+
+
+async def test_after_a_person_says_no_the_action_is_not_requested_again(settings):
+    email = tool("send_email", to="head.of.unit@aurora.example", subject="s", body="b")
+    script = briefing_script(
+        dispatcher_steps=[email, dict(email, id="again"), finish(sent=False, note="Rejected.")]
+    )
+    async with runner_for(settings, "briefing_desk", ScriptedLLM(script)) as runner:
+        run_id = await runner.start(REQUEST)
+        [pending] = runner.store.pending_approvals()
+        await runner.decide(pending["id"], False, "head of office", "not now")
+        events = runner.store.events(run_id)
+    assert sum(e["kind"] == "approval_requested" for e in events) == 1
+    assert runner.store.run_status(run_id) == "completed"
+    assert any(e["kind"] == "repeat_skipped" for e in events)
+
+
+def test_spent_tools_are_not_offered_again():
+    from govagents.runtime import _spent
+    from govagents.tools import ToolSpec
+
+    def spec(name, action, props=None):
+        schema = {"type": "object", "properties": props or {}}
+        return ToolSpec(name=name, description="", input_schema=schema, action_class=action)
+
+    listing = spec("list_patterns", "read")
+    search = spec("search_notes", "read", {"query": {"type": "string"}})
+    email = spec("send_email", "external", {"to": {"type": "string"}})
+    assert _spent(listing, ["list_patterns"], [])  # same answer every time
+    assert not _spent(search, ["search_notes"], [])  # another query may help
+    assert _spent(email, ["send_email"], [])
+    assert _spent(email, [], ["send_email"])  # refused in this turn
+
+
+def test_cost_estimates_use_the_organisation_prices_not_the_run_prices(monkeypatch):
+    from govagents.config import DEFAULT_PRICES, Settings
+
+    monkeypatch.setenv("GOVAGENTS_PRICE_FAST", "0,0")
+    settings = Settings.from_env()
+    assert settings.cost("fast", 1_000_000, 0) == 0
+    assert settings.estimate_prices["fast"] == DEFAULT_PRICES["fast"]

@@ -2,6 +2,19 @@
 
 Versions follow [semantic versioning](https://semver.org).
 
+## 0.3.5
+
+From the second structured run with Llama 3.1 8B:
+
+- A person's rejection is final for the rest of the agent's turn: the action is not requested
+  again (the model had asked twice), and the agent is told to finish. Actions refused by the
+  policy are treated the same way.
+- The same call is never executed twice in a turn; with structured output, a tool without
+  arguments is no longer offered once called (the architect had listed the patterns four
+  times).
+- Cost estimates for proposed services use the organisation's prices per tier, not the
+  prices of the model running the agents (a local run had estimated every service at $0).
+
 ## 0.3.4
 
 - A write or external tool runs at most once per turn of an agent: a repeat is not executed and

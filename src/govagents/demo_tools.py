@@ -250,12 +250,11 @@ def register_triage_tools(registry: ToolRegistry, ws: Workspace, settings: Setti
     def estimate_cost(
         requests_per_month, input_tokens_per_request, output_tokens_per_request, model_tier
     ):
-        monthly = settings.cost(
-            model_tier,
-            int(requests_per_month) * int(input_tokens_per_request),
-            int(requests_per_month) * int(output_tokens_per_request),
-        )
-        price_in, price_out = settings.prices[model_tier]
+        price_in, price_out = settings.estimate_prices[model_tier]
+        monthly = (
+            int(requests_per_month) * int(input_tokens_per_request) * price_in
+            + int(requests_per_month) * int(output_tokens_per_request) * price_out
+        ) / 1_000_000
         return {
             "monthly_cost_usd": round(monthly, 2),
             "prices_usd_per_million_tokens": {"input": price_in, "output": price_out},

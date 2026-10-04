@@ -31,7 +31,10 @@ class Settings:
     base_url: str | None = None
     api_key: str | None = None
     models: dict = field(default_factory=lambda: dict(DEFAULT_MODELS["anthropic"]))
-    prices: dict = field(default_factory=lambda: dict(DEFAULT_PRICES))
+    prices: dict = field(default_factory=lambda: dict(DEFAULT_PRICES))  # what this run costs
+    # The organisation's price per tier, used to estimate the cost of a proposed service: not
+    # changed by GOVAGENTS_PRICE_*, which only says what the models running the agents cost.
+    estimate_prices: dict = field(default_factory=lambda: dict(DEFAULT_PRICES))
     recordings: Path | None = None
     offline: bool = False
     enable_mcp: bool = True  # connect the MCP servers listed in scenarios
