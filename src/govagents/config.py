@@ -35,6 +35,7 @@ class Settings:
     recordings: Path | None = None
     offline: bool = False
     enable_mcp: bool = True  # connect the MCP servers listed in scenarios
+    structured_output: bool = False  # constrain replies to the agent's actions (JSON schema)
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -64,6 +65,8 @@ class Settings:
             recordings=Path(recordings) if recordings else None,
             offline=env.get("GOVAGENTS_OFFLINE", "").lower() in ("1", "true", "yes"),
             enable_mcp=env.get("GOVAGENTS_ENABLE_MCP", "true").lower() in ("1", "true", "yes"),
+            structured_output=env.get("GOVAGENTS_STRUCTURED_OUTPUT", "").lower()
+            in ("1", "true", "yes"),
         )
 
     def cost(self, tier: str, input_tokens: int, output_tokens: int) -> float:

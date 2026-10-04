@@ -2,6 +2,14 @@
 
 Versions follow [semantic versioning](https://semver.org).
 
+## 0.3.3
+
+- `GOVAGENTS_STRUCTURED_OUTPUT`: on an OpenAI-compatible endpoint, each reply is constrained by
+  a JSON schema to one of the agent's own tools (with its arguments) or a finish that matches
+  the output schema, so a small model cannot invent a tool or leave out a required field. If the
+  server refuses the schema, the call is repeated without it. Recordings made this way are kept
+  apart, and CI replays them with the same setting (`recordings-<model>+structured`).
+
 ## 0.3.2
 
 - First local open-weight run (Llama 3.1 8B on a laptop CPU), recorded and replayed in CI.

@@ -40,12 +40,15 @@ jobs:
         run: govagents eval evals/cases.jsonl
       - name: Replay the local open-weight runs (safety gate)
         run: |
-          # evals/recordings-<model with ':' as '-'>, e.g. recordings-llama3.1-8b-ctx8k
+          # evals/recordings-<model with ':' as '-'>[+structured], e.g. recordings-llama3.1-8b-ctx8k
           for dir in evals/recordings-*/; do
             [ -d "$dir" ] || continue
-            name=$(basename "$dir"); name=${name#recordings-}; model=${name/-/:}
-            echo "replaying $model"
+            name=$(basename "$dir"); name=${name#recordings-}; structured=false
+            if [[ "$name" == *+structured ]]; then structured=true; name=${name%+structured}; fi
+            model=${name/-/:}
+            echo "replaying $model (structured output: $structured)"
             GOVAGENTS_OFFLINE=1 GOVAGENTS_PROVIDER=openai_compatible \
+            GOVAGENTS_STRUCTURED_OUTPUT=$structured \
             GOVAGENTS_MODEL_FAST="$model" GOVAGENTS_MODEL_STRONG="$model" \
             GOVAGENTS_PRICE_FAST=0,0 GOVAGENTS_PRICE_STRONG=0,0 \
             GOVAGENTS_RECORDINGS="$dir" GOVAGENTS_ENABLE_MCP=false \

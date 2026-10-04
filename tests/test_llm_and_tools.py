@@ -186,3 +186,64 @@ def test_gateway_refusals_surface_with_their_reason():
     )
     with pytest.raises(RuntimeError, match="HTTP 402: Monthly budget reached"):
         llm.next_turn("sys", HISTORY, [SEARCH], SCHEMA)
+
+
+def test_structured_output_allows_only_real_tools_and_complete_outputs():
+    import jsonschema
+
+    from govagents.llm import action_schema
+    from govagents.tools import ToolSpec
+
+    tools = [
+        ToolSpec(
+            name="register_usecase",
+            description="",
+            input_schema={
+                "type": "object",
+                "properties": {"title": {"type": "string"}},
+                "required": ["title"],
+            },
+            action_class="write_internal",
+        )
+    ]
+    output = {
+        "type": "object",
+        "properties": {"data_classification": {"enum": ["public", "internal", "restricted"]}},
+        "required": ["data_classification"],
+    }
+    schema = action_schema(tools, output)
+    valid = jsonschema.Draft202012Validator(schema)
+    assert valid.is_valid(
+        {"action": "tool", "tool": "register_usecase", "arguments": {"title": "x"}}
+    )
+    assert valid.is_valid({"action": "finish", "output": {"data_classification": "restricted"}})
+    assert not valid.is_valid({"action": "tool", "tool": "parse_number", "arguments": {}})
+    assert not valid.is_valid({"action": "tool", "tool": "register_usecase", "arguments": {}})
+    assert not valid.is_valid({"action": "finish", "output": {"data_classification": "secret"}})
+
+
+def test_structured_output_is_sent_and_dropped_if_the_server_refuses_it():
+    import httpx
+
+    from govagents.llm import JsonActionLLM
+
+    bodies = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        bodies.append(body)
+        if "response_format" in body:
+            return httpx.Response(400, json={"error": {"message": "schema not supported"}})
+        reply = '{"action": "finish", "output": {"summary": "ok"}}'
+        return httpx.Response(200, json={"choices": [{"message": {"content": reply}}]})
+
+    llm = JsonActionLLM(
+        "http://ollama/v1",
+        "m",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+        structured=True,
+    )
+    turn = llm.next_turn("system", [{"role": "user", "content": "hi"}], [], {})
+    assert turn.action["type"] == "finish"
+    assert bodies[0]["response_format"]["type"] == "json_schema"
+    assert "response_format" not in bodies[1]

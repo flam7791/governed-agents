@@ -31,12 +31,18 @@ def llm_factory(settings: Settings):
                 else:
                     if not settings.base_url:
                         raise RuntimeError("GOVAGENTS_BASE_URL is required for openai_compatible.")
-                    inner = JsonActionLLM(settings.base_url, model, api_key=settings.api_key)
+                    inner = JsonActionLLM(
+                        settings.base_url,
+                        model,
+                        api_key=settings.api_key,
+                        structured=settings.structured_output,
+                    )
             if settings.recordings or settings.offline:
                 root = (settings.recordings or settings.data_dir / "recordings") / tier
-                inner = RecordingAgentLLM(
-                    inner, root, key=f"{settings.provider}:{model}", offline=settings.offline
-                )
+                key = f"{settings.provider}:{model}"
+                if settings.structured_output and settings.provider == "openai_compatible":
+                    key += ":structured"  # a different way of asking: never mix recordings
+                inner = RecordingAgentLLM(inner, root, key=key, offline=settings.offline)
             cache[tier] = inner
         return cache[tier]
 

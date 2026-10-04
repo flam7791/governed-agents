@@ -309,6 +309,7 @@ Without an endpoint, tracing is off and costs nothing.
 | `GOVAGENTS_OFFLINE` | false | replay recordings only |
 | `GOVAGENTS_ENABLE_MCP` | true | connect the MCP servers listed in scenarios |
 | `GOVAGENTS_HTTP_TIMEOUT` | 180 | seconds per model call on an OpenAI-compatible endpoint (raise it for a model on a CPU) |
+| `GOVAGENTS_STRUCTURED_OUTPUT` | false | constrain each reply to the agent's tools and output schema (`response_format` JSON schema; Ollama, vLLM, llama.cpp) |
 | `GOVAGENTS_PRICE_FAST` / `_STRONG` | 1,5 / 2,10 | USD per million input and output tokens, for the cost report (`0,0` for a model on your own machine) |
 
 Scenarios live in `scenarios/<name>/scenario.json`: agents, stages, policy and MCP servers.

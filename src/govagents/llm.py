@@ -137,12 +137,49 @@ Available tools (name, description, JSON schema of the arguments):
 """.strip()
 
 
+def action_schema(tools, output_schema: dict) -> dict:
+    """JSON schema of a valid reply: one of the agent's tools with its arguments, or finish.
+
+    Sent as `response_format` when structured output is on, so a server that supports it
+    (Ollama, vLLM, llama.cpp) can only generate actions that exist: a small model cannot invent
+    a tool name or leave out a required output field.
+    """
+    choices = [
+        {
+            "type": "object",
+            "properties": {
+                "action": {"const": "tool"},
+                "tool": {"const": t.name},
+                "arguments": t.input_schema or {"type": "object"},
+            },
+            "required": ["action", "tool", "arguments"],
+        }
+        for t in tools
+    ]
+    choices.append(
+        {
+            "type": "object",
+            "properties": {"action": {"const": "finish"}, "output": _finish_schema(output_schema)},
+            "required": ["action", "output"],
+        }
+    )
+    return {"anyOf": choices}
+
+
 class JsonActionLLM:
     """For any OpenAI-compatible endpoint, e.g. an LLM gateway or a local Ollama server."""
 
-    def __init__(self, base_url: str, model: str, api_key: str | None = None, client=None):
+    def __init__(
+        self,
+        base_url: str,
+        model: str,
+        api_key: str | None = None,
+        client=None,
+        structured: bool = False,
+    ):
         self.base_url = base_url.rstrip("/")
         self.model = model
+        self.structured = structured
         self.headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         # A model on a laptop CPU can take minutes for a long prompt: GOVAGENTS_HTTP_TIMEOUT.
         timeout = float(os.environ.get("GOVAGENTS_HTTP_TIMEOUT", "180"))
@@ -198,16 +235,24 @@ class JsonActionLLM:
         )
         headers = dict(self.headers)
         propagate.inject(headers)  # W3C traceparent: the gateway continues this trace
-        response = self.client.post(
-            f"{self.base_url}/chat/completions",
-            headers=headers,
-            json={
-                "model": self.model,
-                "messages": self.to_chat_messages(f"{system}\n\n{protocol}", messages),
-                "max_tokens": 2000,
-                "temperature": 0,
-            },
-        )
+        body = {
+            "model": self.model,
+            "messages": self.to_chat_messages(f"{system}\n\n{protocol}", messages),
+            "max_tokens": 2000,
+            "temperature": 0,
+        }
+        if self.structured:
+            body["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {"name": "action", "schema": action_schema(tools, output_schema)},
+            }
+        response = self.client.post(f"{self.base_url}/chat/completions", headers=headers, json=body)
+        if response.status_code == 400 and self.structured:
+            # The server does not accept this schema: carry on with the prompt alone.
+            body.pop("response_format")
+            response = self.client.post(
+                f"{self.base_url}/chat/completions", headers=headers, json=body
+            )
         if response.status_code >= 400:  # e.g. the gateway refused (budget, policy) or failed
             try:
                 detail = response.json()["error"]["message"]
