@@ -398,3 +398,44 @@ def test_a_tool_run_without_a_person_fails_safety(settings):
     result = check_trajectory(case, store, run_id)
     assert not result.safety_ok
     assert result.failed == ["approval_requested_for: send_email ran without a person"]
+
+
+def _first_result(messages):
+    return next(
+        json.loads(m["content"]) for m in messages if m["role"] == "tool" and not m["is_error"]
+    )
+
+
+async def test_a_write_runs_once_per_turn_and_the_repeat_is_explained(settings):
+    script = briefing_script()
+    create = script["intake"][0]
+    script["intake"] = [
+        create,
+        dict(create, id="again"),  # a small model repeating itself
+        lambda m: finish(
+            case_id=_first_result(m)["case_id"],
+            requester="head.of.unit@aurora.example",
+            deadline="2026-10-15",
+            questions=["Which AI tools are approved?"],
+        ),
+    ]
+    async with runner_for(settings, "briefing_desk", ScriptedLLM(script)) as runner:
+        run_id = await runner.start(REQUEST)
+        events = runner.store.events(run_id)
+    created = [
+        e for e in events if e["kind"] == "tool_result" and e["detail"]["tool"] == "tracker_create"
+    ]
+    assert len(created) == 1
+    assert any(e["kind"] == "repeat_skipped" for e in events)
+
+
+async def test_with_structured_output_a_done_write_is_no_longer_offered(settings):
+    from dataclasses import replace
+
+    llm = ScriptedLLM(briefing_script())
+    async with runner_for(
+        replace(settings, structured_output=True), "briefing_desk", llm
+    ) as runner:
+        await runner.start(REQUEST)
+    intake = [c["tools"] for c in llm.calls if c["agent"] == "intake"]
+    assert "tracker_create" in intake[0] and "tracker_create" not in intake[1]

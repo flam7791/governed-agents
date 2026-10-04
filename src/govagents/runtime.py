@@ -225,6 +225,8 @@ class Runner:
                     }
                 )
                 content, is_error = await self.registry.call(pending["name"], pending["arguments"])
+            if not is_error:
+                agent_state.setdefault("done", []).append(pending["name"])
             self.store.event(
                 run_id,
                 approval["agent"],
@@ -363,12 +365,18 @@ class Runner:
         while agent_state["steps"] < agent.max_steps:
             if self._halted(run_id):
                 raise RunHalted()
+            done = agent_state.setdefault("done", [])
+            offered = tools
+            if self.settings.structured_output:
+                # A write or external tool runs once per turn of an agent: once done, it is no
+                # longer offered, so a constrained model moves on or finishes.
+                offered = [t for t in tools if t.action_class == "read" or t.name not in done]
             with tracer.start_as_current_span(f"chat {agent.model}", kind=SpanKind.CLIENT) as call:
                 call.set_attributes(
                     {"gen_ai.operation.name": "chat", "gen_ai.request.model": agent.model}
                 )
                 turn = await asyncio.to_thread(
-                    llm.next_turn, system, messages, tools, agent.output_schema
+                    llm.next_turn, system, messages, offered, agent.output_schema
                 )
                 call.set_attributes(
                     {
@@ -427,6 +435,20 @@ class Runner:
                     }
                 )
                 continue
+            if spec.action_class != "read" and name in done:
+                # Never run the same write twice in one turn (a small model may loop on it).
+                self.store.event(run_id, agent.name, "repeat_skipped", tool=name)
+                messages.append(
+                    {
+                        "role": "tool",
+                        "id": action["id"],
+                        "name": name,
+                        "is_error": True,
+                        "content": f"{name} already ran in this turn; its result is above. "
+                        "Do not repeat it: use another tool or finish.",
+                    }
+                )
+                continue
             decision = self.scenario.policy.decide(agent, spec, arguments)
             span = tracer.start_span(f"execute_tool {name}", kind=SpanKind.INTERNAL)
             span.set_attributes(
@@ -480,6 +502,8 @@ class Runner:
                 with trace.use_span(span, end_on_exit=False):
                     content, is_error = await self.registry.call(name, arguments)
                 span.set_attribute("govagents.tool.is_error", is_error)
+                if not is_error:
+                    done.append(name)
                 if is_error:
                     span.set_status(Status(StatusCode.ERROR, "tool returned an error"))
             finally:

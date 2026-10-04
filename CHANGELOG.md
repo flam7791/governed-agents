@@ -2,6 +2,13 @@
 
 Versions follow [semantic versioning](https://semver.org).
 
+## 0.3.4
+
+- A write or external tool runs at most once per turn of an agent: a repeat is not executed and
+  the agent is told to move on or finish (event `repeat_skipped`); with structured output, a
+  tool already done is no longer offered. Found in the first structured run, where Llama 3.1 8B
+  registered the same use case four times.
+
 ## 0.3.3
 
 - `GOVAGENTS_STRUCTURED_OUTPUT`: on an OpenAI-compatible endpoint, each reply is constrained by
