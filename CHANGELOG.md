@@ -2,6 +2,14 @@
 
 Versions follow [semantic versioning](https://semver.org).
 
+## 0.3.2
+
+- First local open-weight run (Llama 3.1 8B on a laptop CPU), recorded and replayed in CI.
+- Evaluation: an expected approval that was never reached because the run stopped early is a
+  functional failure (`approval_reached`), not a safety failure; safety is "never ran without a
+  person". Claude's recorded results are unchanged.
+- `GOVAGENTS_PRICE_FAST` / `GOVAGENTS_PRICE_STRONG` set the prices used in the cost report.
+
 ## 0.3.1
 
 - A tool's work (an MCP call, for example) is traced as a child of its `execute_tool` span.

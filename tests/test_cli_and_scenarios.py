@@ -69,3 +69,13 @@ def test_settings_map_tiers_for_a_gateway(monkeypatch):
     settings = Settings.from_env()
     assert settings.models == {"fast": "fast", "strong": "strong"}
     assert replace(settings).base_url.endswith("/v1")
+
+
+def test_prices_can_be_set_per_tier(monkeypatch):
+    from govagents.config import Settings
+
+    monkeypatch.setenv("GOVAGENTS_PRICE_FAST", "0,0")
+    monkeypatch.setenv("GOVAGENTS_PRICE_STRONG", "3,15")
+    settings = Settings.from_env()
+    assert settings.cost("fast", 1_000_000, 1_000_000) == 0
+    assert settings.cost("strong", 1_000_000, 1_000_000) == 18

@@ -1,0 +1,1 @@
+{"action": {"type": "tool", "id": "call_dcbd64b0", "name": "search_notes", "arguments": {"query": "AI prompts and outputs retention and record status", "top_k": "10"}}, "error": null, "input_tokens": 1042, "output_tokens": 37}

@@ -1,0 +1,1 @@
+{"action": {"type": "finish", "id": "call_9353c524", "output": {"sent": false, "note": "Email could not be sent due to rejection by the evaluation case."}}, "error": null, "input_tokens": 1468, "output_tokens": 60}

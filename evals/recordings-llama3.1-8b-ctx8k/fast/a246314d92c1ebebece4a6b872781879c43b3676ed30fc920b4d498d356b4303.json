@@ -1,0 +1,1 @@
+{"action": {"type": "tool", "id": "call_0e89878f", "name": "tracker_create", "arguments": {"title": "Input by 2026-10-20", "requester": "head.of.unit@aurora.example", "deadline": "2026-10-20", "topic": "AI tools policy update"}}, "error": null, "input_tokens": 480, "output_tokens": 64}

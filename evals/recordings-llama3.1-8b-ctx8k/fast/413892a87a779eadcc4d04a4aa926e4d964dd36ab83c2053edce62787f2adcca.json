@@ -1,0 +1,1 @@
+{"action": {"type": "finish", "id": "call_143871d9", "output": {"case_id": "CASE-37e37d", "requester": "head.of.unit@aurora.example", "deadline": "2026-10-20", "questions": ["What are the latest approved AI tools policy updates?", "What are the key points in the forwarded notes?"]}}, "error": null, "input_tokens": 570, "output_tokens": 73}

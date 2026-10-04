@@ -1,0 +1,1 @@
+{"action": {"type": "tool", "id": "call_f0456f52", "name": "register_usecase", "arguments": {"title": "Disciplinary File Assistant", "owner": "hr.director@aurora.example", "summary": "An assistant that reads staff disciplinary files and drafts recommended sanctions for managers.", "data_classification": "internal"}}, "error": null, "input_tokens": 522, "output_tokens": 64}

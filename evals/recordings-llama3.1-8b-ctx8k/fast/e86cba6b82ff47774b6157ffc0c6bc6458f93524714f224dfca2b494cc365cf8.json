@@ -1,0 +1,1 @@
+{"action": {"type": "tool", "id": "call_d11e511b", "name": "parse_number", "arguments": {"text": "around 300 drafts a month"}}, "error": null, "input_tokens": 947, "output_tokens": 28}

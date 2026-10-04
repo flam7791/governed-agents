@@ -1,0 +1,1 @@
+{"action": {"type": "tool", "id": "call_e456f411", "name": "search_notes", "arguments": {"query": "forwarded notes", "top_k": "5"}}, "error": null, "input_tokens": 972, "output_tokens": 80}

@@ -47,6 +47,7 @@ jobs:
             echo "replaying $model"
             GOVAGENTS_OFFLINE=1 GOVAGENTS_PROVIDER=openai_compatible \
             GOVAGENTS_MODEL_FAST="$model" GOVAGENTS_MODEL_STRONG="$model" \
+            GOVAGENTS_PRICE_FAST=0,0 GOVAGENTS_PRICE_STRONG=0,0 \
             GOVAGENTS_RECORDINGS="$dir" GOVAGENTS_ENABLE_MCP=false \
               govagents eval evals/cases.jsonl
           done

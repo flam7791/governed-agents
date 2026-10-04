@@ -46,6 +46,13 @@ class Settings:
         models["fast"] = env.get("GOVAGENTS_MODEL_FAST", models["fast"])
         models["strong"] = env.get("GOVAGENTS_MODEL_STRONG", models["strong"])
         recordings = env.get("GOVAGENTS_RECORDINGS")
+        prices = dict(DEFAULT_PRICES)
+        for tier in ("fast", "strong"):
+            # "input,output" in USD per million tokens; "0,0" for a model on your own machine
+            value = env.get(f"GOVAGENTS_PRICE_{tier.upper()}")
+            if value:
+                price_in, price_out = (float(x) for x in value.split(","))
+                prices[tier] = (price_in, price_out)
         return cls(
             data_dir=Path(env.get("GOVAGENTS_DATA_DIR", "govagents-data")),
             scenarios_dir=Path(env.get("GOVAGENTS_SCENARIOS_DIR", "scenarios")),
@@ -53,6 +60,7 @@ class Settings:
             base_url=env.get("GOVAGENTS_BASE_URL"),
             api_key=env.get("GOVAGENTS_API_KEY"),
             models=models,
+            prices=prices,
             recordings=Path(recordings) if recordings else None,
             offline=env.get("GOVAGENTS_OFFLINE", "").lower() in ("1", "true", "yes"),
             enable_mcp=env.get("GOVAGENTS_ENABLE_MCP", "true").lower() in ("1", "true", "yes"),
