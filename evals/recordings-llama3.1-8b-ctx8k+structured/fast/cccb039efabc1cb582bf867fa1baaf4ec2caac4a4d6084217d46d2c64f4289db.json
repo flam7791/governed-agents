@@ -1,0 +1,1 @@
+{"action": {"type": "finish", "id": "call_25fc7f10", "output": {"sent": false, "note": "The draft was not approved by the reviewer and could not be sent to the requester due to a policy refusal."}}, "error": null, "input_tokens": 1538, "output_tokens": 42}

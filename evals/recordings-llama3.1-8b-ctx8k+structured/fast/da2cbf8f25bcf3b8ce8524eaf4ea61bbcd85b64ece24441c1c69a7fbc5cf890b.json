@@ -1,0 +1,1 @@
+{"action": {"type": "tool", "id": "call_7af90211", "name": "tracker_update", "arguments": {"case_id": "CASE-37e37d", "status": "needs attention"}}, "error": null, "input_tokens": 1087, "output_tokens": 36}

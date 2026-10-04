@@ -1,0 +1,1 @@
+{"action": {"type": "finish", "id": "call_68af82fa", "output": {"sent": false, "note": "The draft reply to the request was not approved by the reviewer. The case status is 'needs attention'."}}, "error": null, "input_tokens": 1306, "output_tokens": 42}

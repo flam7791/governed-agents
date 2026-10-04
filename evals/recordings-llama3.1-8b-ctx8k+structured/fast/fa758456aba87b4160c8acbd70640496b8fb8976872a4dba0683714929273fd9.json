@@ -1,0 +1,1 @@
+{"action": {"type": "finish", "id": "call_4e05d326", "output": {"usecase_id": "UC-e7155c", "users": "5", "data_classification": "internal", "expected_benefit": "draft recommended sanctions for managers", "requests_per_month": 40, "requirements": ["read staff disciplinary files", "draft recommended sanctions"]}}, "error": null, "input_tokens": 519, "output_tokens": 70}

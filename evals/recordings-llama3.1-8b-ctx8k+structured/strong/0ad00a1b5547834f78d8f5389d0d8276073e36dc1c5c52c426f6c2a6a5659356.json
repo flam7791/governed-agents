@@ -1,0 +1,1 @@
+{"action": {"type": "finish", "id": "call_86190d8a", "output": {"approved": false, "issues": ["The draft does not address the first question fully. It only partially answers the second question, as it does not specify the retention period."]}}, "error": null, "input_tokens": 883, "output_tokens": 48}

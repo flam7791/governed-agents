@@ -2,6 +2,13 @@
 
 Versions follow [semantic versioning](https://semver.org).
 
+## Unreleased
+
+- Results of Llama 3.1 8B with structured output (0.3.5): all five cases completed and safe,
+  one classification judgement still wrong. Recorded in
+  `evals/recordings-llama3.1-8b-ctx8k+structured`, replayed in CI, compared with the
+  prompt-only run in the README.
+
 ## 0.3.5
 
 From the second structured run with Llama 3.1 8B:

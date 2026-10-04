@@ -1,0 +1,1 @@
+{"action": {"type": "finish", "id": "call_edb77051", "output": {"monthly_cost_fast_usd": 0.1, "monthly_cost_strong_usd": 0.21, "assumptions": "300 requests/month, 100 input tokens/request, 50 output tokens/request, fast model tier, 100 input tokens/request, 50 output tokens/request, strong model tier"}}, "error": null, "input_tokens": 935, "output_tokens": 77}

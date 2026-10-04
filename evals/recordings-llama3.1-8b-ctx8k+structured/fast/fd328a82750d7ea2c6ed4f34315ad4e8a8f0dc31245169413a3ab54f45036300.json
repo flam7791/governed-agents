@@ -1,0 +1,1 @@
+{"action": {"type": "tool", "id": "call_d22f9c47", "name": "submit_decision_record", "arguments": {"usecase_id": "UC-e715c", "recommendation": "approve", "record": "Case file contents"}}, "error": null, "input_tokens": 781, "output_tokens": 44}

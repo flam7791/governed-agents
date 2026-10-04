@@ -1,0 +1,1 @@
+{"action": {"type": "finish", "id": "call_3a709190", "output": {"monthly_cost_fast_usd": 0.01, "monthly_cost_strong_usd": 0.03, "assumptions": "40 requests/month, 100 input tokens/request, 50 output tokens/request"}}, "error": null, "input_tokens": 851, "output_tokens": 57}

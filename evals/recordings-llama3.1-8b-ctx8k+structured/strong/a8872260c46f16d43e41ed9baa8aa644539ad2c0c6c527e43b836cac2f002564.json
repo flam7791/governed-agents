@@ -1,0 +1,1 @@
+{"action": {"type": "tool", "id": "call_21abf623", "name": "lookup_policy", "arguments": {"query": "drafting AI, data classification internal, user count 10, requests per month 300"}}, "error": null, "input_tokens": 628, "output_tokens": 40}
