@@ -83,3 +83,22 @@ in production, single sign-on would provide the identity and the roles.
 decisions, model calls, approvals) at scrape time.
 **Consequences.** Figures survive restarts and match the audit trail exactly. The cost is a few
 queries per scrape, which is fine at this scale; a large deployment would pre-aggregate.
+
+## 10. Turn rules as a chain of guards, not branches in the loop
+
+**Context.** By 0.3.6 the agent loop carried five rules of its own besides the policy engine: the
+kill switch, the run cost budget, no second request after a refusal, no repeated write or call,
+and no finish before the required tools ran. Each had been added as one more branch inside the
+loop, so the loop was growing with every live run that found a new failure. A source-level study
+of eleven production coding agents recommends a linear loop until three or more independent turn
+policies appear, then a middleware pipeline ([Barbaste et al., 2026][harness], Recommendation 1).
+**Decision.** Move the rules into `guards.py`: each is a guard that can act at fixed points of a
+turn (before the model call, on the tools offered, after the model call, on a finish, on a tool
+proposal), run in a fixed order, first rejection wins. The policy engine stays separate: it
+decides what a tool call may do; guards decide what a turn may do.
+**Consequences.** Same behaviour, proven by replaying every recorded trajectory run (Claude,
+Llama 3.1 8B with and without structured output, Qwen 2.5 7B) with identical results before and
+after. A new rule is a guard with its own test. The order of the chain is now part of the design
+and is tested.
+
+[harness]: https://arxiv.org/abs/2609.00006

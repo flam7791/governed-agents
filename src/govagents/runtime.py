@@ -8,6 +8,10 @@ person pauses the whole run durably until someone approves or rejects it; denied
 reported back to the agent, which can adapt. The graph itself is deterministic (the order of
 stages and the review loops are code), while each agent is autonomous inside its stage, within
 its tool list, autonomy level and step budget. Every step is written to the audit trail.
+
+The loop only proposes and carries out. What a tool call may do is decided by the policy engine
+(policy.py); what a turn may do (kill switch, cost budget, no repeats, verify-on-stop) by the
+chain of turn guards (guards.py).
 """
 
 from __future__ import annotations
@@ -23,6 +27,7 @@ from opentelemetry import trace
 from opentelemetry.trace import SpanKind, Status, StatusCode
 
 from .config import Settings
+from .guards import RunHalted, Turn, call_signature, default_guards, first_rejection, spent
 from .llm import AgentLLM, ReplayMiss
 from .models import AgentManifest
 from .policy import Policy
@@ -131,18 +136,7 @@ def missing_fields(output: dict, schema: dict) -> list[str]:
 # --------------------------------------------------------------------------- runner
 
 
-def _spent(tool, done: list, refused: list) -> bool:
-    """True when offering the tool again in this turn cannot help (see _advance_agent_steps)."""
-    if tool.name in refused:
-        return True
-    if tool.name not in done:
-        return False
-    no_arguments = not (tool.input_schema or {}).get("properties")
-    return tool.action_class != "read" or no_arguments
-
-
-class RunHalted(RuntimeError):
-    pass
+_spent = spent  # kept under its old name for callers and tests
 
 
 class FourEyesViolation(PermissionError):
@@ -197,6 +191,9 @@ class Runner:
         self.registry = registry
         self.llm_for_tier = llm_for_tier
         self.settings = settings
+        self.guards = default_guards(
+            settings.data_dir, scenario.policy.max_run_cost_usd, settings.structured_output
+        )
 
     # ------------------------------------------------------------------ public API
 
@@ -269,12 +266,6 @@ class Runner:
         return run_id
 
     # ------------------------------------------------------------------ internals
-
-    def _halted(self, run_id: str) -> bool:
-        """Kill switches: a HALT file stops every run; `govagents halt` stops one."""
-        if (self.settings.data_dir / "HALT").exists():
-            return True
-        return self.store.run_status(run_id) == "halted"
 
     def _finish_run(self, run_id: str, state: dict, status: str, error: str | None = None):
         state["status"] = status
@@ -377,19 +368,14 @@ class Runner:
         )
         messages = agent_state["messages"]
 
+        turn_ctx = Turn(run_id, agent, state, self.store)
         while agent_state["steps"] < agent.max_steps:
-            if self._halted(run_id):
-                raise RunHalted()
-            done = agent_state.setdefault("done", [])
-            calls = agent_state.setdefault("calls", [])
-            refused = agent_state.setdefault("refused", [])
+            for guard in self.guards:
+                guard.before_model(turn_ctx)
+            done, calls, refused = turn_ctx.done, turn_ctx.calls, turn_ctx.refused
             offered = tools
-            if self.settings.structured_output:
-                # Within one turn of an agent, nothing that cannot help is offered again: a
-                # write or external tool once done, a tool without arguments once called (same
-                # answer), and a tool refused by the policy or by a person. A constrained model
-                # then moves on or finishes.
-                offered = [t for t in tools if not _spent(t, done, refused)]
+            for guard in self.guards:
+                offered = guard.offer(turn_ctx, offered)
             with tracer.start_as_current_span(f"chat {agent.model}", kind=SpanKind.CLIENT) as call:
                 call.set_attributes(
                     {"gen_ai.operation.name": "chat", "gen_ai.request.model": agent.model}
@@ -413,8 +399,9 @@ class Runner:
                 output_tokens=turn.output_tokens,
                 cost_usd=cost,
             )
-            if state["spent_usd"] > self.scenario.policy.max_run_cost_usd:
-                return f"run budget of {self.scenario.policy.max_run_cost_usd} USD exceeded"
+            stop = first_rejection(guard.after_model(turn_ctx) for guard in self.guards)
+            if stop:
+                return stop
             agent_state["steps"] += 1
 
             if turn.action is None:
@@ -424,34 +411,19 @@ class Runner:
             messages.append({"role": "assistant", "action": action})
 
             if action["type"] == "finish":
-                problems = missing_fields(action["output"], agent.output_schema)
-                if problems:
+                rejection = first_rejection(
+                    guard.check_finish(turn_ctx, action["output"]) for guard in self.guards
+                )
+                if rejection:
+                    if rejection.event:
+                        self.store.event(run_id, agent.name, rejection.event, **rejection.detail)
                     messages.append(
                         {
                             "role": "tool",
                             "id": action["id"],
                             "name": "finish",
                             "is_error": True,
-                            "content": "Output rejected: " + "; ".join(problems),
-                        }
-                    )
-                    continue
-                # An output cannot report work that was not done: a required action must have
-                # run, or been refused by the policy or a person, before the finish is accepted.
-                # Found with Qwen 2.5 7B, which reported a decision record as submitted and a
-                # draft id as saved without calling either tool.
-                missing = [t for t in agent.required_tools if t not in done and t not in refused]
-                if missing:
-                    self.store.event(run_id, agent.name, "finish_refused", missing=missing)
-                    messages.append(
-                        {
-                            "role": "tool",
-                            "id": action["id"],
-                            "name": "finish",
-                            "is_error": True,
-                            "content": f"Output rejected: {', '.join(missing)} has not run in "
-                            "this turn, so the output would report work that was not done. "
-                            f"Call {missing[0]} first, then finish.",
+                            "content": rejection.message,
                         }
                     )
                     continue
@@ -473,26 +445,20 @@ class Runner:
                     }
                 )
                 continue
-            signature = [name, json.dumps(arguments, sort_keys=True)]
-            repeat = None
-            if name in refused and spec.action_class != "read":
-                # A person's (or the policy's) no is final for this turn: no second request.
-                repeat = f"{name} was refused in this turn. Do not propose it again: finish "
-                repeat += "and say what was not done."
-            elif (spec.action_class != "read" and name in done) or signature in calls:
-                # Never run the same write twice in one turn, nor the same call: the result is
-                # already above (a small model may loop on it).
-                repeat = f"{name} already ran in this turn; its result is above. "
-                repeat += "Do not repeat it: use another tool or finish."
-            if repeat:
-                self.store.event(run_id, agent.name, "repeat_skipped", tool=name)
+            signature = call_signature(name, arguments)
+            rejection = first_rejection(
+                guard.check_proposal(turn_ctx, name, spec, arguments) for guard in self.guards
+            )
+            if rejection:
+                if rejection.event:
+                    self.store.event(run_id, agent.name, rejection.event, **rejection.detail)
                 messages.append(
                     {
                         "role": "tool",
                         "id": action["id"],
                         "name": name,
                         "is_error": True,
-                        "content": repeat,
+                        "content": rejection.message,
                     }
                 )
                 continue

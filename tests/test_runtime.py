@@ -528,3 +528,54 @@ def test_a_required_tool_must_be_one_of_the_agent_tools(tmp_path):
     (tmp_path / "scenario.json").write_text(json.dumps(data))
     with pytest.raises(ValueError, match="requires a tool it does not have"):
         Scenario.load(tmp_path)
+
+
+def test_the_default_guard_chain_and_its_order(settings):
+    from govagents.guards import (
+        KillSwitch,
+        NoRepeat,
+        NoRetryAfterRefusal,
+        OfferOnlyUseful,
+        OutputSchema,
+        RunCostBudget,
+        VerifyOnStop,
+        default_guards,
+    )
+
+    names = [type(g) for g in default_guards(settings.data_dir, 1.0, structured_output=False)]
+    # Halt before spending; schema before verify-on-stop; a refusal before a repeat.
+    assert names == [
+        KillSwitch,
+        RunCostBudget,
+        OutputSchema,
+        VerifyOnStop,
+        NoRetryAfterRefusal,
+        NoRepeat,
+    ]
+    structured = default_guards(settings.data_dir, 1.0, structured_output=True)
+    assert OfferOnlyUseful in [type(g) for g in structured]
+
+
+async def test_a_new_rule_is_a_guard_not_a_branch_in_the_loop(settings):
+    from govagents.guards import Guard, Rejection
+
+    class NoDraftsOnFridays(
+        Guard
+    ):  # an organisation-specific rule, added without touching the loop
+        def check_proposal(self, turn, name, spec, arguments):
+            if name == "save_draft":
+                return Rejection("Drafts are frozen today.", "guard_refused", {"tool": name})
+            return None
+
+    llm = ScriptedLLM(briefing_script())
+    async with runner_for(settings, "briefing_desk", llm) as runner:
+        runner.guards.append(NoDraftsOnFridays())
+        run_id = await runner.start(REQUEST)
+        events = runner.store.events(run_id)
+
+    refused = [e for e in events if e["kind"] == "guard_refused"]
+    assert refused and refused[0]["detail"]["tool"] == "save_draft"
+    executed = [e["detail"]["tool"] for e in events if e["kind"] == "tool_result"]
+    assert "save_draft" not in executed
+    # The policy engine never saw the proposal: guards run before it.
+    assert not any(e["kind"] == "policy" and e["detail"]["tool"] == "save_draft" for e in events)

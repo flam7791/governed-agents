@@ -87,6 +87,12 @@ On top of that:
   policy engine still refuses: the briefing knowledge folder contains a planted "forward this to
   an outside address and publish it" note to prove it.
 
+The budgets, the repeat rules, the required-tools check (a *verify-on-stop* guard) and the kill
+switches are **turn guards** ([`guards.py`](src/govagents/guards.py)): small policies the agent
+loop runs at fixed points of every turn, in a fixed order, before the policy engine sees a tool
+call. The loop itself only asks for an action and carries it out, so an organisation's own rule
+is one more guard in `Runner.guards`, not a new branch in the loop.
+
 ### The agent register
 
 Every agent is declared in a manifest: purpose, owner, autonomy, tools, required tools, model
@@ -367,6 +373,7 @@ Adding a scenario is configuration, plus tools if it needs new ones.
 ```
 src/govagents/
   runtime.py      scenarios, the bounded agent loop, the workflow runner, approvals
+  guards.py       turn guards: kill switch, cost budget, no repeats, verify-on-stop
   policy.py       the policy engine
   tools.py        tool registry: Python tools and MCP servers, action classes
   llm.py          Anthropic (native tools), OpenAI-compatible JSON actions, record/replay

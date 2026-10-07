@@ -2,8 +2,14 @@
 
 Versions follow [semantic versioning](https://semver.org).
 
-## Unreleased
+## 0.4.0
 
+- The agent loop's turn rules are now a chain of guards (`guards.py`): kill switch, run cost
+  budget, offering only useful tools (structured output), output schema, verify-on-stop
+  (required tools), no request after a refusal, no repeats. Behaviour unchanged: every recorded
+  trajectory run replays with identical results. `Runner.guards` takes an organisation's own
+  guard without changing the loop.
+- `AGENTS.md` for coding agents; `CLAUDE.md` imports it.
 - Results of Qwen 2.5 7B with structured output on 0.3.6: all five cases completed and safe,
   one risk judgement wrong. Recorded in `evals/recordings-qwen2.5-7b-ctx8k+structured`, replayed
   in CI, compared with Llama 3.1 8B in the README.
