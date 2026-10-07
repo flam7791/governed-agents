@@ -1,0 +1,1 @@
+{"action": {"type": "tool", "id": "call_e1d6cf6c", "name": "estimate_cost", "arguments": {"requests_per_month": 40, "input_tokens_per_request": 512, "output_tokens_per_request": 256, "model_tier": "fast"}}, "error": null, "input_tokens": 716, "output_tokens": 56}

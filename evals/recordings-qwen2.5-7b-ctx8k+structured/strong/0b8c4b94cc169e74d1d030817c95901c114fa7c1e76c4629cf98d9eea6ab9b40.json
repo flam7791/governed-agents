@@ -1,0 +1,1 @@
+{"action": {"type": "tool", "id": "call_2d393b16", "name": "search_notes", "arguments": {"query": "AI tools approved for staff, restricted information, AI prompts and outputs retention", "top_k": 5}}, "error": null, "input_tokens": 600, "output_tokens": 43}

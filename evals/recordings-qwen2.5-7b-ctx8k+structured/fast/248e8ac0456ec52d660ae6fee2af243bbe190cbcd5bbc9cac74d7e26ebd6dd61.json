@@ -1,0 +1,1 @@
+{"action": {"type": "tool", "id": "call_194b3b06", "name": "register_usecase", "arguments": {"title": "Press Release Drafting Assistant", "owner": "comms.lead@aurora.example", "summary": "Automate the initial drafting of press releases from internal reports and briefing notes.", "data_classification": "internal"}}, "error": null, "input_tokens": 584, "output_tokens": 67}

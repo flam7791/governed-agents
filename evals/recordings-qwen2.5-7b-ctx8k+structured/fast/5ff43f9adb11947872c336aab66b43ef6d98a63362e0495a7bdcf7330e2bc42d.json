@@ -1,0 +1,1 @@
+{"action": {"type": "finish", "id": "call_7abe6173", "output": {"sent": true, "note": "The approved reply has been sent to the requester and the case status has been updated to 'sent'."}}, "error": null, "input_tokens": 1451, "output_tokens": 41}

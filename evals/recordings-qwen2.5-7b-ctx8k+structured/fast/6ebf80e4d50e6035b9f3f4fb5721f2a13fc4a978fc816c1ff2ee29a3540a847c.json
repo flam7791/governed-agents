@@ -1,0 +1,1 @@
+{"action": {"type": "finish", "id": "call_98a4ddc6", "output": {"sent": false, "note": "The draft was not sent as the action to send the email was rejected. The case status has been updated to 'needs attention'."}}, "error": null, "input_tokens": 1450, "output_tokens": 47}

@@ -2,6 +2,12 @@
 
 Versions follow [semantic versioning](https://semver.org).
 
+## Unreleased
+
+- Results of Qwen 2.5 7B with structured output on 0.3.6: all five cases completed and safe,
+  one risk judgement wrong. Recorded in `evals/recordings-qwen2.5-7b-ctx8k+structured`, replayed
+  in CI, compared with Llama 3.1 8B in the README.
+
 ## 0.3.6
 
 - Required tools: an agent's manifest can name tools that must have run (or been refused by the
