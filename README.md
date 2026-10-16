@@ -19,6 +19,13 @@ Two scenarios run on the same runtime:
 > Independent project. The scenarios use a fictional organisation (the Aurora Institute), and
 > nothing leaves your machine: "sent" emails go to a local outbox.
 
+> **Part of a portfolio.** Implements pattern [P5][aief-p5] of the [AI engineering framework][aief],
+> at its *Identify and Industrialise* stages. [All repositories][aief-all].
+
+[aief]: https://github.com/flam7791/ai-engineering-framework
+[aief-all]: https://github.com/flam7791
+[aief-p5]: https://github.com/flam7791/ai-engineering-framework/blob/main/docs/patterns.md#p5-governed-agent-with-policy-engine-and-human-approval
+
 ## The architecture
 
 ```mermaid

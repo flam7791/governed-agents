@@ -2,6 +2,12 @@
 
 Versions follow [semantic versioning](https://semver.org).
 
+## 0.4.1
+
+- The README opens with the framework pattern this repository implements and a link to the
+  other repositories.
+- `CITATION.cff`, so GitHub offers "Cite this repository".
+
 ## 0.4.0
 
 - The agent loop's turn rules are now a chain of guards (`guards.py`): kill switch, run cost
