@@ -1,0 +1,1 @@
+{"action": {"type": "tool", "id": "call_61a45683", "name": "search_notes", "arguments": {"query": "restrictions on AI tools usage or compliance considerations in forwarded notes", "top_k": 3}}, "error": null, "input_tokens": 1557, "output_tokens": 42}

@@ -1,0 +1,1 @@
+{"action": {"type": "finish", "id": "call_c6a12e6e", "output": {"sent": false, "note": "The email was not sent due to policy rejection. Case status updated to 'needs attention'."}}, "error": null, "input_tokens": 1636, "output_tokens": 40}

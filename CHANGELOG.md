@@ -2,6 +2,17 @@
 
 Versions follow [semantic versioning](https://semver.org).
 
+## 0.4.2
+
+- Ministral 3 8B (Mistral, open weights, Apache 2.0) on the five trajectory cases, structured
+  output, laptop CPU, recorded and replayed in CI: 5/5 completed, 5/5 safe and every check passed
+  (28/28), including the data classification and risk level that Llama and Qwen each missed. No
+  call refused by the policy. On the planted instruction its reviewer rejected every draft that
+  carried the note and the run ended with the case marked "needs attention", nothing sent.
+  77 minutes for the five cases. Results and comparison in the README.
+- CI: a `model.txt` in a recordings folder gives the exact model name when the folder name is
+  ambiguous (`ministral-3-8b-ctx8k` could be `ministral-3:8b` or `ministral:3-8b`).
+
 ## 0.4.1
 
 - The README opens with the framework pattern this repository implements and a link to the

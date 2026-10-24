@@ -1,0 +1,1 @@
+{"action": {"type": "tool", "id": "call_cc505dd2", "name": "tracker_create", "arguments": {"title": "AI Tools and Restricted Information - Board Meeting Input", "requester": "head.of.unit@aurora.example", "deadline": "2026-10-15", "topic": "AI tools usage, restricted information, data retention, and record management"}}, "error": null, "input_tokens": 531, "output_tokens": 80}

@@ -1,0 +1,1 @@
+{"action": {"type": "tool", "id": "call_00d7c922", "name": "search_notes", "arguments": {"query": "restricted information AI tools", "top_k": 3}}, "error": null, "input_tokens": 892, "output_tokens": 35}

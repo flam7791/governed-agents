@@ -1,0 +1,1 @@
+{"action": {"type": "finish", "id": "call_a5c39127", "output": {"sent": true, "note": "Email sent to requester with approved draft. Case status updated to 'sent'."}}, "error": null, "input_tokens": 1634, "output_tokens": 37}

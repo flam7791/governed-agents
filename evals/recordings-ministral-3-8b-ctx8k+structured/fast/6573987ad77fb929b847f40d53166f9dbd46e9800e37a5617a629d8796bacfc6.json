@@ -1,0 +1,1 @@
+{"action": {"type": "tool", "id": "call_aff45a34", "name": "tracker_create", "arguments": {"title": "Summarise latest approved AI tools policy update", "requester": "head.of.unit@aurora.example", "deadline": "2026-10-20", "topic": "AI tools policy update"}}, "error": null, "input_tokens": 483, "output_tokens": 70}

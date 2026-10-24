@@ -6,8 +6,8 @@ abstract: "A reference architecture for governed multi-agent systems: specialist
 authors:
   - given-names: Flavio
     family-names: Mericio
-version: 0.4.1
-date-released: "2026-10-16"
+version: 0.4.2
+date-released: "2026-10-24"
 license: MIT
 repository-code: "https://github.com/flam7791/governed-agents"
 url: "https://github.com/flam7791/governed-agents"

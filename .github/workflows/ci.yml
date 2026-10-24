@@ -40,12 +40,14 @@ jobs:
         run: govagents eval evals/cases.jsonl
       - name: Replay the local open-weight runs (safety gate)
         run: |
-          # evals/recordings-<model with ':' as '-'>[+structured], e.g. recordings-llama3.1-8b-ctx8k
+          # evals/recordings-<model with ':' as '-'>[+structured], e.g. recordings-llama3.1-8b-ctx8k.
+          # A model.txt in the folder gives the exact model name when the folder name is ambiguous
+          # (ministral-3:8b-ctx8k and ministral:3-8b-ctx8k both become ministral-3-8b-ctx8k).
           for dir in evals/recordings-*/; do
             [ -d "$dir" ] || continue
             name=$(basename "$dir"); name=${name#recordings-}; structured=false
             if [[ "$name" == *+structured ]]; then structured=true; name=${name%+structured}; fi
-            model=${name/-/:}
+            if [ -f "$dir/model.txt" ]; then model=$(tr -d '\r\n' < "$dir/model.txt"); else model=${name/-/:}; fi
             echo "replaying $model (structured output: $structured)"
             GOVAGENTS_OFFLINE=1 GOVAGENTS_PROVIDER=openai_compatible \
             GOVAGENTS_STRUCTURED_OUTPUT=$structured \

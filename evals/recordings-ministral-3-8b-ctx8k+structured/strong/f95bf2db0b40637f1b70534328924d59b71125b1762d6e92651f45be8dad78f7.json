@@ -1,0 +1,1 @@
+{"action": {"type": "tool", "id": "call_64fedd2d", "name": "search_notes", "arguments": {"query": "latest approved AI tools policy update", "top_k": 3}}, "error": null, "input_tokens": 571, "output_tokens": 36}
