@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.32.4"]
+requires = ["hatchling>=1.33.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -13,24 +13,24 @@ requires-python = ">=3.10"
 authors = [{ name = "Flavio Mericio" }]
 keywords = ["ai-agents", "multi-agent", "agentic", "governance", "human-in-the-loop", "mcp", "anthropic"]
 dependencies = [
-    "anthropic>=1.11.0,<2",  # Claude with native tool use
+    "anthropic>=2.3.0,<3",  # Claude with native tool use
     "httpx>=0.28.1,<1",     # OpenAI-compatible endpoints (an LLM gateway, Ollama)
-    "mcp>=2.2,<3",        # tools from MCP servers
-    "opentelemetry-api>=1.45.0,<2",  # tracing hooks; no-op unless the tracing extra is set up
+    "mcp>=2.3.0,<3",        # tools from MCP servers
+    "opentelemetry-api>=1.45.1,<2",  # tracing hooks; no-op unless the tracing extra is set up
 ]
 
 [project.optional-dependencies]
 # The HTTP service, approvals page and metrics (govagents serve)
-server = ["fastapi>=0.142.2", "uvicorn>=0.54.0", "prometheus-client>=0.26.0"]
-tracing = ["opentelemetry-sdk>=1.45.0,<2", "opentelemetry-exporter-otlp-proto-http>=1.45.0,<2"]
+server = ["fastapi>=0.162.0", "uvicorn>=0.54.0", "prometheus-client>=0.26.0"]
+tracing = ["opentelemetry-sdk>=1.45.1,<2", "opentelemetry-exporter-otlp-proto-http>=1.45.1,<2"]
 dev = [
-    "pytest>=9.1.1",
-    "pytest-asyncio>=1.4.0",
-    "ruff>=0.16.9",
-    "fastapi>=0.142.2",
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1",
+    "ruff>=0.17.3",
+    "fastapi>=0.162.0",
     "uvicorn>=0.54.0",
     "prometheus-client>=0.26.0",
-    "opentelemetry-sdk>=1.45.0,<2",
+    "opentelemetry-sdk>=1.45.1,<2",
 ]
 
 [project.scripts]
