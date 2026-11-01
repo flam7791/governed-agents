@@ -6,7 +6,7 @@
 #           -e GOVAGENTS_API_KEY=... governed-agents
 # Runs, the audit trail, approvals and the demo outbox live on the /data volume.
 
-FROM python:3.12-slim
+FROM python:3.15-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
